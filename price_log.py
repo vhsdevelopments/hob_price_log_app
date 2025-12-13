@@ -10,18 +10,13 @@ from supabase import create_client
 # SUPABASE CONFIG
 # -------------------------------------------------------------------
 
+
+
 SUPABASE_URL = "https://kvfnffdnplmxgdltywbn.supabase.co"
 
-# Do not hard code your service role key into GitHub
-# Put it in Streamlit secrets or an environment variable
-# Streamlit secrets key name can be SUPABASE_SERVICE_ROLE
 SUPABASE_SERVICE_ROLE = (
-    st.secrets.get("SUPABASE_SERVICE_ROLE", "") if hasattr(st, "secrets") else ""
-) or os.getenv("SUPABASE_SERVICE_ROLE", "")
-
-if not SUPABASE_SERVICE_ROLE:
-    st.error("Missing SUPABASE_SERVICE_ROLE. Add it to Streamlit secrets or environment variables.")
-    st.stop()
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2Zm5mZmRucGxteGdkbHR5d2JuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTI1MzI0NiwiZXhwIjoyMDgwODI5MjQ2fQ.oHDnmLEOyqN1hM0Qd5S4u1sEtEjsgp1OPmAyHuShO3U"
+)
 
 supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE)
 
@@ -464,3 +459,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
