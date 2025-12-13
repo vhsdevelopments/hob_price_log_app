@@ -1,3 +1,4 @@
+import os
 import re
 import difflib
 import streamlit as st
@@ -9,17 +10,20 @@ from supabase import create_client
 # SUPABASE CONFIG
 # -------------------------------------------------------------------
 
-# Your Supabase project URL
 SUPABASE_URL = "https://kvfnffdnplmxgdltywbn.supabase.co"
 
-# Your service_role key
+# Do not hard code your service role key into GitHub
+# Put it in Streamlit secrets or an environment variable
+# Streamlit secrets key name can be SUPABASE_SERVICE_ROLE
 SUPABASE_SERVICE_ROLE = (
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2Zm5mZmRucGxteGdkbHR5d2JuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTI1MzI0NiwiZXhwIjoyMDgwODI5MjQ2fQ.oHDnmLEOyqN1hM0Qd5S4u1sEtEjsgp1OPmAyHuShO3U"
-)
+    st.secrets.get("SUPABASE_SERVICE_ROLE", "") if hasattr(st, "secrets") else ""
+) or os.getenv("SUPABASE_SERVICE_ROLE", "")
+
+if not SUPABASE_SERVICE_ROLE:
+    st.error("Missing SUPABASE_SERVICE_ROLE. Add it to Streamlit secrets or environment variables.")
+    st.stop()
 
 supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE)
-
-
 
 
 # =========================================================
@@ -86,11 +90,14 @@ def load_brand_levels(limit: int = 5000):
         .execute()
     )
     data = resp.data or []
+    cleaned = []
     for row in data:
-        row["brand"] = normalize_label(row.get("brand") or "")
-        row["price_level"] = normalize_label(row.get("price_level") or "")
-    data = [r for r in data if r.get("brand")]
-    return data
+        b = normalize_label(row.get("brand") or "")
+        pl = normalize_label(row.get("price_level") or "")
+        if b:
+            cleaned.append({"brand": b, "price_level": pl})
+    cleaned = sorted(cleaned, key=lambda r: r["brand"])
+    return cleaned
 
 
 def load_categories_for_brand(brand: str, limit: int = 10000):
@@ -154,7 +161,8 @@ def main():
 
     tab_new, tab_search = st.tabs(["New Sale", "Price Search"])
 
-    pl_options = ["VERY HIGH END", "HIGH END", "MID HIGH", "MID", "LOW"]
+    # Only these price levels exist
+    pl_options = ["VERY HIGH END", "HIGH END", "MID HIGH"]
 
     # =========================
     # NEW SALE TAB
@@ -183,6 +191,7 @@ def main():
             options=brand_dropdown_options(brand_list),
             index=0,
             placeholder="Select brand",
+            key="new_brand_selectbox",
         )
 
         final_brand = ""
@@ -195,7 +204,11 @@ def main():
 
         if selected_brand == "ADD NEW BRAND":
             is_new_brand = True
-            new_brand_raw = st.text_input("New brand name").strip()
+
+            new_brand_raw = st.text_input(
+                "New brand name",
+                key="new_brand_text_input",
+            ).strip()
 
             if new_brand_raw:
                 similar_brands = find_similar_label(new_brand_raw, brand_list)
@@ -206,27 +219,45 @@ def main():
                     brand_resolution = st.radio(
                         "We found similar existing brands. Choose one:",
                         options,
-                        key="brand_resolution_new",
+                        key="new_brand_resolution_radio",
                     )
 
             if similar_brands and brand_resolution and brand_resolution.startswith("USE EXISTING: "):
                 final_brand = brand_resolution.replace("USE EXISTING: ", "").strip()
                 is_new_brand = False
+
                 brand_price_level = brand_to_level.get(final_brand, "")
                 if brand_price_level:
                     st.info(f"PRICE LEVEL FOR {final_brand}: {brand_price_level}")
                 else:
-                    brand_price_level = st.selectbox("Select price level for this brand", pl_options)
+                    brand_price_level = st.selectbox(
+                        "Select price level for this brand",
+                        pl_options,
+                        key="existing_brand_missing_pl_selectbox",
+                    )
             else:
                 final_brand = normalize_label(new_brand_raw) if new_brand_raw else ""
-                brand_price_level = st.selectbox("Select price level for this new brand", pl_options)
+
+                # This only appears when ADD NEW BRAND is selected
+                brand_price_level = st.selectbox(
+                    "Select price level for this new brand",
+                    pl_options,
+                    key="new_brand_pl_selectbox",
+                )
+
         else:
             final_brand = selected_brand
             brand_price_level = brand_to_level.get(final_brand, "")
+
             if brand_price_level:
                 st.info(f"PRICE LEVEL FOR {final_brand}: {brand_price_level}")
             else:
-                brand_price_level = st.selectbox("Select price level for this brand", pl_options)
+                # Only show this if existing brand has no saved price level
+                brand_price_level = st.selectbox(
+                    "Select price level for this brand",
+                    pl_options,
+                    key="existing_brand_pl_selectbox",
+                )
 
         st.subheader("Category")
 
@@ -237,6 +268,7 @@ def main():
                 index=None,
                 placeholder="Select brand first",
                 disabled=True,
+                key="new_category_disabled_selectbox",
             )
             category_choice = None
             new_category_raw = ""
@@ -245,11 +277,13 @@ def main():
             final_category = ""
         else:
             categories_for_brand = load_categories_for_brand(final_brand)
+
             category_choice = st.selectbox(
                 "Category",
                 options=category_dropdown_options(categories_for_brand),
                 index=None,
                 placeholder="Select category",
+                key="new_category_selectbox",
             )
 
             new_category_raw = ""
@@ -258,7 +292,11 @@ def main():
             final_category = ""
 
             if category_choice == "ADD NEW CATEGORY":
-                new_category_raw = st.text_input("New category name").strip()
+                new_category_raw = st.text_input(
+                    "New category name",
+                    key="new_category_text_input",
+                ).strip()
+
                 if new_category_raw:
                     similar_cats = find_similar_label(new_category_raw, categories_for_brand)
                     if similar_cats:
@@ -268,7 +306,7 @@ def main():
                         cat_resolution = st.radio(
                             "We found similar existing categories for this brand. Choose one:",
                             options,
-                            key="cat_resolution_new",
+                            key="new_category_resolution_radio",
                         )
 
                 if similar_cats and cat_resolution and cat_resolution.startswith("USE EXISTING: "):
@@ -283,15 +321,16 @@ def main():
         raw_price = st.text_input(
             "Enter price (numbers only)",
             placeholder="34.99",
+            key="new_price_text_input",
         )
         cleaned_price = clean_price_input(raw_price)
         if cleaned_price:
             st.caption(f"Interpreted as {format_price(cleaned_price)}")
 
-        on_sale = st.checkbox("On sale?")
-        notes = st.text_area("Notes (optional)")
+        on_sale = st.checkbox("On sale?", key="new_on_sale_checkbox")
+        notes = st.text_area("Notes (optional)", key="new_notes_text_area")
 
-        if st.button("Save sale"):
+        if st.button("Save sale", key="new_save_button"):
             if selected_brand == "ADD NEW BRAND" and not new_brand_raw:
                 st.error("Please enter a brand name.")
                 return
@@ -314,6 +353,10 @@ def main():
 
             if not brand_price_level:
                 st.error("Please select a price level.")
+                return
+
+            if brand_price_level not in pl_options:
+                st.error("Price level must be VERY HIGH END, HIGH END, or MID HIGH.")
                 return
 
             upsert_brand_level(final_brand, brand_price_level)
@@ -346,6 +389,7 @@ def main():
             options=brand_list,
             index=None,
             placeholder="Select brand",
+            key="search_brand_selectbox",
         )
 
         if not search_brand:
@@ -355,6 +399,7 @@ def main():
                 index=None,
                 placeholder="Select brand first",
                 disabled=True,
+                key="search_category_disabled_selectbox",
             )
             st.info("Select a brand to see categories and results.")
             return
@@ -365,6 +410,7 @@ def main():
             options=categories_for_brand,
             index=None,
             placeholder="Select category",
+            key="search_category_selectbox",
         )
 
         if not search_category:
@@ -418,4 +464,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
