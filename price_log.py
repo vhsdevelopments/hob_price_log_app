@@ -130,7 +130,7 @@ def insert_sale(brand: str, category: str, price: float, on_sale: bool, notes: s
             "price": float(price),
             "on_sale": bool(on_sale),
             "notes": notes or "",
-            "price_level": price_level,
+            "price_level": price_level or "",
         }
     ).execute()
 
@@ -141,7 +141,6 @@ def insert_sale(brand: str, category: str, price: float, on_sale: bool, notes: s
 
 def brand_dropdown_options(brand_list):
     return ["SEARCH EXISTING BRAND", "ADD NEW BRAND"] + brand_list
-
 
 
 def category_dropdown_options(category_list):
@@ -157,7 +156,6 @@ def main():
 
     tab_new, tab_search = st.tabs(["New Sale", "Price Search"])
 
-    # Only these price levels exist
     pl_options = ["VERY HIGH END", "HIGH END", "MID HIGH"]
 
     # =========================
@@ -186,7 +184,6 @@ def main():
             "Brand",
             options=brand_dropdown_options(brand_list),
             index=0,
-            placeholder="Select brand",
             key="new_brand_selectbox",
         )
 
@@ -225,16 +222,9 @@ def main():
                 brand_price_level = brand_to_level.get(final_brand, "")
                 if brand_price_level:
                     st.info(f"PRICE LEVEL FOR {final_brand}: {brand_price_level}")
-                else:
-                    brand_price_level = st.selectbox(
-                        "Select price level for this brand",
-                        pl_options,
-                        key="existing_brand_missing_pl_selectbox",
-                    )
             else:
                 final_brand = normalize_label(new_brand_raw) if new_brand_raw else ""
 
-                # This only appears when ADD NEW BRAND is selected
                 brand_price_level = st.selectbox(
                     "Select price level for this new brand",
                     pl_options,
@@ -242,27 +232,24 @@ def main():
                 )
 
         else:
-            final_brand = selected_brand
-            brand_price_level = brand_to_level.get(final_brand, "")
-
-            if brand_price_level:
-                st.info(f"PRICE LEVEL FOR {final_brand}: {brand_price_level}")
+            if selected_brand == "SEARCH EXISTING BRAND":
+                final_brand = ""
+                brand_price_level = ""
             else:
-                # Only show this if existing brand has no saved price level
-                brand_price_level = st.selectbox(
-                    "Select price level for this brand",
-                    pl_options,
-                    key="existing_brand_pl_selectbox",
-                )
+                final_brand = selected_brand
+                brand_price_level = brand_to_level.get(final_brand, "")
+                if brand_price_level:
+                    st.info(f"PRICE LEVEL FOR {final_brand}: {brand_price_level}")
+                else:
+                    brand_price_level = ""
 
         st.subheader("Category")
 
         if not final_brand:
             st.selectbox(
                 "Category",
-                options=[],
-                index=None,
-                placeholder="Select brand first",
+                options=["Select brand first"],
+                index=0,
                 disabled=True,
                 key="new_category_disabled_selectbox",
             )
@@ -277,8 +264,7 @@ def main():
             category_choice = st.selectbox(
                 "Category",
                 options=category_dropdown_options(categories_for_brand),
-                index=None,
-                placeholder="Select category",
+                index=0,
                 key="new_category_selectbox",
             )
 
@@ -309,7 +295,7 @@ def main():
                     final_category = cat_resolution.replace("USE EXISTING: ", "").strip()
                 else:
                     final_category = normalize_label(new_category_raw) if new_category_raw else ""
-            elif category_choice:
+            elif category_choice and category_choice != "ADD NEW CATEGORY":
                 final_category = category_choice
 
         st.subheader("Price")
@@ -347,15 +333,15 @@ def main():
                 st.error("Please enter a valid price.")
                 return
 
-            if not brand_price_level:
-                st.error("Please select a price level.")
-                return
+            if selected_brand == "ADD NEW BRAND":
+                if not brand_price_level:
+                    st.error("Please select a price level.")
+                    return
+                if brand_price_level not in pl_options:
+                    st.error("Price level must be VERY HIGH END, HIGH END, or MID HIGH.")
+                    return
 
-            if brand_price_level not in pl_options:
-                st.error("Price level must be VERY HIGH END, HIGH END, or MID HIGH.")
-                return
-
-            upsert_brand_level(final_brand, brand_price_level)
+                upsert_brand_level(final_brand, brand_price_level)
 
             insert_sale(
                 brand=final_brand,
