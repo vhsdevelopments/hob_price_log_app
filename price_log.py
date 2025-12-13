@@ -30,8 +30,6 @@ def normalize_label(name: str) -> str:
         return ""
     name = name.upper().strip()
     name = re.sub(r"[^A-Z0-9 &/]", "", name)
-    if len(name) > 3 and name.endswith("S"):
-        name = name[:-1]
     name = re.sub(r"\s+", " ", name).strip()
     return name
 
@@ -446,5 +444,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
