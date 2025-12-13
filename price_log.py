@@ -140,7 +140,8 @@ def insert_sale(brand: str, category: str, price: float, on_sale: bool, notes: s
 # =========================================================
 
 def brand_dropdown_options(brand_list):
-    return ["ADD NEW BRAND"] + brand_list
+    return ["SEARCH EXISTING BRAND", "ADD NEW BRAND"] + brand_list
+
 
 
 def category_dropdown_options(category_list):
@@ -459,4 +460,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
