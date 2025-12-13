@@ -165,10 +165,10 @@ def main():
         st.markdown(
             """
             **INSTRUCTIONS:**
-            1. SELECT A BRAND OR INPUT NEW BRAND NAME  
-            2. SELECT A CATEGORY OR INPUT NEW CATEGORY  
-            3. ADD PRICE  
-            4. IF BRAND IS NEW, SELECT A PRICE LEVEL  
+            1. Select a brand or input a new brand name  
+            2. Select a category or input new category  
+            3. Add price
+            4. If brand is new, select a price level  
             """
         )
 
@@ -444,6 +444,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
