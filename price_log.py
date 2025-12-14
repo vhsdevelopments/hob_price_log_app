@@ -256,7 +256,21 @@ def main():
 
         brands = [b["brand"] for b in load_brand_levels()]
 
-        search_brand = st.selectbox("Brand", brands, key="search_brand")
+search_brand = st.selectbox(
+    "Brand",
+    options=["SELECT BRAND"] + brands,
+    index=0,
+    key="search_brand",
+)
+if search_brand == "SELECT BRAND":
+    st.selectbox(
+        "Category",
+        options=["Select brand first"],
+        disabled=True,
+        key="search_category_disabled",
+    )
+    st.info("Select a brand to see results.")
+    return
 
         categories = load_categories_for_brand(search_brand)
         search_category = st.selectbox("Category", categories, key="search_cat")
@@ -290,6 +304,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
