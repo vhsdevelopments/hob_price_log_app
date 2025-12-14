@@ -26,7 +26,7 @@ def normalize_label(name: str) -> str:
     return name
 
 
-def clean_price_input(val: str):
+def clean_price_input(val):
     if not val:
         return None
     cleaned = re.sub(r"[^0-9.]", "", str(val))
@@ -37,13 +37,10 @@ def clean_price_input(val: str):
 
 
 def format_price(val):
-    try:
-        return f"${float(val):,.2f}"
-    except Exception:
-        return str(val)
+    return f"${float(val):,.2f}"
 
 
-def safe_range(limit: int):
+def safe_range(limit):
     return (0, max(0, int(limit) - 1))
 
 
@@ -51,42 +48,38 @@ def safe_range(limit: int):
 # DATA LOADERS
 # =========================================================
 
-def load_brand_levels(limit: int = 5000):
+def load_brand_levels(limit=5000):
     start, end = safe_range(limit)
-    resp = (
+    res = (
         supabase.table("brand_price_levels")
         .select("brand,price_level")
         .order("brand")
         .range(start, end)
         .execute()
-    )
-    data = resp.data or []
+        .data
+    ) or []
+
     out = []
-    for r in data:
-        b = normalize_label(r.get("brand"))
-        pl = normalize_label(r.get("price_level"))
-        if b:
-            out.append({"brand": b, "price_level": pl})
+    for r in res:
+        brand = normalize_label(r.get("brand"))
+        level = normalize_label(r.get("price_level"))
+        if brand:
+            out.append({"brand": brand, "price_level": level})
     return sorted(out, key=lambda x: x["brand"])
 
 
-def load_categories_for_brand(brand: str, limit: int = 10000):
-    if not brand:
-        return []
+def load_categories_for_brand(brand, limit=10000):
     start, end = safe_range(limit)
-    resp = (
+    res = (
         supabase.table("sales")
         .select("category")
         .eq("brand", brand)
         .range(start, end)
         .execute()
-    )
-    data = resp.data or []
-    cats = {
-        normalize_label(r.get("category"))
-        for r in data
-        if r.get("category")
-    }
+        .data
+    ) or []
+
+    cats = {normalize_label(r.get("category")) for r in res if r.get("category")}
     return sorted(c for c in cats if c)
 
 
@@ -118,24 +111,13 @@ def main():
     st.set_page_config(page_title="HOB Upscale Price Log", layout="wide")
 
     tab_new, tab_search = st.tabs(["New Sale", "Price Search"])
-
     PRICE_LEVELS = ["VERY HIGH END", "HIGH END", "MID HIGH"]
 
     # =========================
-    # NEW SALE TAB
+    # NEW SALE
     # =========================
     with tab_new:
         st.header("Record a new sale")
-
-        st.markdown(
-            """
-            **INSTRUCTIONS:**
-            1. SELECT A BRAND OR INPUT NEW BRAND NAME
-            2. SELECT A CATEGORY OR INPUT NEW CATEGORY
-            3. ADD PRICE
-            4. IF BRAND IS NEW, SELECT A PRICE LEVEL
-            """
-        )
 
         brands = load_brand_levels()
         brand_list = [b["brand"] for b in brands]
@@ -144,25 +126,20 @@ def main():
         selected_brand = st.selectbox(
             "Brand",
             ["SEARCH EXISTING BRAND", "ADD NEW BRAND"] + brand_list,
-            index=0,
-            key="ns_brand_select",
+            key="ns_brand",
         )
 
         final_brand = ""
         brand_price_level = ""
 
         if selected_brand == "ADD NEW BRAND":
-            raw_brand = st.text_input(
-                "New brand name",
-                key="ns_new_brand_name",
-            ).strip()
-
+            raw_brand = st.text_input("New brand name", key="ns_new_brand")
             final_brand = normalize_label(raw_brand)
 
             brand_price_level = st.selectbox(
                 "Select price level for this new brand",
                 PRICE_LEVELS,
-                key="ns_new_brand_price_level",
+                key="ns_new_brand_level",
             )
 
         elif selected_brand != "SEARCH EXISTING BRAND":
@@ -178,34 +155,27 @@ def main():
                 "Category",
                 ["Select brand first"],
                 disabled=True,
-                key="ns_category_disabled",
+                key="ns_cat_disabled",
             )
             final_category = ""
         else:
             categories = load_categories_for_brand(final_brand)
-
             category_choice = st.selectbox(
                 "Category",
                 ["ADD NEW CATEGORY"] + categories,
-                index=0,
-                key="ns_category_select",
+                key="ns_category",
             )
 
             if category_choice == "ADD NEW CATEGORY":
-                raw_cat = st.text_input(
-                    "New category name",
-                    key="ns_new_category_name",
-                ).strip()
-                final_category = normalize_label(raw_cat)
+                final_category = normalize_label(
+                    st.text_input("New category name", key="ns_new_cat")
+                )
             else:
                 final_category = category_choice
 
         st.subheader("Price")
 
-        raw_price = st.text_input(
-            "Enter price (numbers only)",
-            key="ns_price_input",
-        )
+        raw_price = st.text_input("Enter price (numbers only)", key="ns_price")
         cleaned_price = clean_price_input(raw_price)
         if cleaned_price:
             st.caption(f"Interpreted as {format_price(cleaned_price)}")
@@ -213,23 +183,12 @@ def main():
         on_sale = st.checkbox("On sale?", key="ns_on_sale")
         notes = st.text_area("Notes (optional)", key="ns_notes")
 
-        if st.button("Save sale", key="ns_save_sale"):
-            if not final_brand:
-                st.error("Please select or enter a brand.")
-                st.stop()
-
-            if not final_category:
-                st.error("Please select or enter a category.")
-                st.stop()
-
-            if not cleaned_price:
-                st.error("Please enter a valid price.")
+        if st.button("Save sale", key="ns_save"):
+            if not final_brand or not final_category or not cleaned_price:
+                st.error("Please complete all required fields.")
                 st.stop()
 
             if selected_brand == "ADD NEW BRAND":
-                if not brand_price_level:
-                    st.error("Please select a price level.")
-                    st.stop()
                 upsert_brand_level(final_brand, brand_price_level)
 
             insert_sale(
@@ -244,7 +203,7 @@ def main():
             st.success("Sale saved.")
 
     # =========================
-    # PRICE SEARCH TAB
+    # PRICE SEARCH
     # =========================
     with tab_search:
         st.header("Price Search")
@@ -254,8 +213,7 @@ def main():
         search_brand = st.selectbox(
             "Brand",
             ["SELECT BRAND"] + brands,
-            index=0,
-            key="ps_brand_select",
+            key="ps_brand",
         )
 
         if search_brand == "SELECT BRAND":
@@ -263,9 +221,9 @@ def main():
                 "Category",
                 ["Select brand first"],
                 disabled=True,
-                key="ps_category_disabled",
+                key="ps_cat_disabled",
             )
-            st.info("Select a brand to see categories and results.")
+            st.info("Select a brand to see results.")
             st.stop()
 
         categories = load_categories_for_brand(search_brand)
@@ -273,8 +231,7 @@ def main():
         search_category = st.selectbox(
             "Category",
             ["SELECT CATEGORY"] + categories,
-            index=0,
-            key="ps_category_select",
+            key="ps_category",
         )
 
         if search_category == "SELECT CATEGORY":
@@ -294,7 +251,11 @@ def main():
             st.info("No matching sales found.")
             st.stop()
 
-        prices = [r["price"] for r in res if r.get("price") is not None]
+        prices = [float(r["price"]) for r in res if r.get("price") is not None]
+
+        if not prices:
+            st.info("No price data available.")
+            st.stop()
 
         st.subheader(f"{len(prices)} SALE(S) FOUND.")
         st.subheader(
@@ -303,30 +264,26 @@ def main():
 
         price_level = next((r["price_level"] for r in res if r.get("price_level")), "")
 
-avg_price = sum(prices) / len(prices)
-low_price = min(prices)
-high_price = max(prices)
+        avg_price = sum(prices) / len(prices)
+        low_price = min(prices)
+        high_price = max(prices)
 
-lines = []
-if price_level:
-    lines.append(f"<div><b>PRICE LEVEL:</b> {price_level}</div>")
+        lines = []
+        if price_level:
+            lines.append(f"<div><b>PRICE LEVEL:</b> {price_level}</div>")
+        lines.append(f"<div><b>AVERAGE PRICE SOLD:</b> {format_price(avg_price)}</div>")
+        lines.append(f"<div><b>LOWEST PRICE SOLD:</b> {format_price(low_price)}</div>")
+        lines.append(f"<div><b>HIGHEST PRICE SOLD:</b> {format_price(high_price)}</div>")
 
-lines.append(f"<div><b>AVERAGE PRICE SOLD:</b> {format_price(avg_price)}</div>")
-lines.append(f"<div><b>LOWEST PRICE SOLD:</b> {format_price(low_price)}</div>")
-lines.append(f"<div><b>HIGHEST PRICE SOLD:</b> {format_price(high_price)}</div>")
-
-st.markdown(
-    "<div style='line-height: 1.8; font-size: 18px; margin-top: 6px;'>"
-    + "".join(lines)
-    + "</div>",
-    unsafe_allow_html=True,
-)
-
+        st.markdown(
+            "<div style='line-height: 1.8; font-size: 18px; margin-top: 6px;'>"
+            + "".join(lines)
+            + "</div>",
+            unsafe_allow_html=True,
+        )
 
 
 if __name__ == "__main__":
     main()
-
-
 
 
