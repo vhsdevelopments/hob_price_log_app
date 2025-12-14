@@ -1,8 +1,5 @@
-import os
 import re
-import difflib
 import streamlit as st
-import pandas as pd
 from supabase import create_client
 
 
@@ -10,16 +7,10 @@ from supabase import create_client
 # SUPABASE CONFIG
 # -------------------------------------------------------------------
 
-
-
 SUPABASE_URL = "https://kvfnffdnplmxgdltywbn.supabase.co"
-
-SUPABASE_SERVICE_ROLE = (
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2Zm5mZmRucGxteGdkbHR5d2JuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTI1MzI0NiwiZXhwIjoyMDgwODI5MjQ2fQ.oHDnmLEOyqN1hM0Qd5S4u1sEtEjsgp1OPmAyHuShO3U"
-)
+SUPABASE_SERVICE_ROLE = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2Zm5mZmRucGxteGdkbHR5d2JuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTI1MzI0NiwiZXhwIjoyMDgwODI5MjQ2fQ.oHDnmLEOyqN1hM0Qd5S4u1sEtEjsgp1OPmAyHuShO3U"
 
 supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE)
-
 
 
 # =========================================================
@@ -46,7 +37,10 @@ def clean_price_input(val: str):
 
 
 def format_price(val):
-    return f"${float(val):,.2f}"
+    try:
+        return f"${float(val):,.2f}"
+    except Exception:
+        return str(val)
 
 
 def safe_range(limit: int):
@@ -77,6 +71,8 @@ def load_brand_levels(limit: int = 5000):
 
 
 def load_categories_for_brand(brand: str, limit: int = 10000):
+    if not brand:
+        return []
     start, end = safe_range(limit)
     resp = (
         supabase.table("sales")
@@ -109,7 +105,7 @@ def insert_sale(brand, category, price, on_sale, notes, price_level):
             "price": float(price),
             "on_sale": bool(on_sale),
             "notes": notes or "",
-            "price_level": price_level,
+            "price_level": price_level or "",
         }
     ).execute()
 
@@ -126,10 +122,20 @@ def main():
     PRICE_LEVELS = ["VERY HIGH END", "HIGH END", "MID HIGH"]
 
     # =========================
-    # NEW SALE
+    # NEW SALE TAB
     # =========================
     with tab_new:
         st.header("Record a new sale")
+
+        st.markdown(
+            """
+            **INSTRUCTIONS:**
+            1. SELECT A BRAND OR INPUT NEW BRAND NAME
+            2. SELECT A CATEGORY OR INPUT NEW CATEGORY
+            3. ADD PRICE
+            4. IF BRAND IS NEW, SELECT A PRICE LEVEL
+            """
+        )
 
         brands = load_brand_levels()
         brand_list = [b["brand"] for b in brands]
@@ -138,19 +144,25 @@ def main():
         selected_brand = st.selectbox(
             "Brand",
             ["SEARCH EXISTING BRAND", "ADD NEW BRAND"] + brand_list,
-            key="new_brand",
+            index=0,
+            key="ns_brand_select",
         )
 
         final_brand = ""
         brand_price_level = ""
 
         if selected_brand == "ADD NEW BRAND":
-            raw_brand = st.text_input("New brand name").strip()
+            raw_brand = st.text_input(
+                "New brand name",
+                key="ns_new_brand_name",
+            ).strip()
+
             final_brand = normalize_label(raw_brand)
 
             brand_price_level = st.selectbox(
                 "Select price level for this new brand",
                 PRICE_LEVELS,
+                key="ns_new_brand_price_level",
             )
 
         elif selected_brand != "SEARCH EXISTING BRAND":
@@ -162,36 +174,62 @@ def main():
         st.subheader("Category")
 
         if not final_brand:
-            st.selectbox("Category", ["Select brand first"], disabled=True)
+            st.selectbox(
+                "Category",
+                ["Select brand first"],
+                disabled=True,
+                key="ns_category_disabled",
+            )
             final_category = ""
         else:
             categories = load_categories_for_brand(final_brand)
+
             category_choice = st.selectbox(
                 "Category",
                 ["ADD NEW CATEGORY"] + categories,
+                index=0,
+                key="ns_category_select",
             )
 
             if category_choice == "ADD NEW CATEGORY":
-                final_category = normalize_label(st.text_input("New category name"))
+                raw_cat = st.text_input(
+                    "New category name",
+                    key="ns_new_category_name",
+                ).strip()
+                final_category = normalize_label(raw_cat)
             else:
                 final_category = category_choice
 
         st.subheader("Price")
 
-        raw_price = st.text_input("Enter price (numbers only)")
+        raw_price = st.text_input(
+            "Enter price (numbers only)",
+            key="ns_price_input",
+        )
         cleaned_price = clean_price_input(raw_price)
         if cleaned_price:
             st.caption(f"Interpreted as {format_price(cleaned_price)}")
 
-        on_sale = st.checkbox("On sale?")
-        notes = st.text_area("Notes (optional)")
+        on_sale = st.checkbox("On sale?", key="ns_on_sale")
+        notes = st.text_area("Notes (optional)", key="ns_notes")
 
-        if st.button("Save sale"):
-            if not final_brand or not final_category or not cleaned_price:
-                st.error("Please complete all required fields.")
-                return
+        if st.button("Save sale", key="ns_save_sale"):
+            if not final_brand:
+                st.error("Please select or enter a brand.")
+                st.stop()
+
+            if not final_category:
+                st.error("Please select or enter a category.")
+                st.stop()
+
+            if not cleaned_price:
+                st.error("Please enter a valid price.")
+                st.stop()
 
             if selected_brand == "ADD NEW BRAND":
+                if not brand_price_level:
+                    st.error("Please select a price level.")
+                    st.stop()
                 upsert_brand_level(final_brand, brand_price_level)
 
             insert_sale(
@@ -206,7 +244,7 @@ def main():
             st.success("Sale saved.")
 
     # =========================
-    # PRICE SEARCH
+    # PRICE SEARCH TAB
     # =========================
     with tab_search:
         st.header("Price Search")
@@ -216,23 +254,32 @@ def main():
         search_brand = st.selectbox(
             "Brand",
             ["SELECT BRAND"] + brands,
+            index=0,
+            key="ps_brand_select",
         )
 
         if search_brand == "SELECT BRAND":
-            st.selectbox("Category", ["Select brand first"], disabled=True)
-            st.info("Select a brand to see results.")
-            return
+            st.selectbox(
+                "Category",
+                ["Select brand first"],
+                disabled=True,
+                key="ps_category_disabled",
+            )
+            st.info("Select a brand to see categories and results.")
+            st.stop()
 
         categories = load_categories_for_brand(search_brand)
 
         search_category = st.selectbox(
             "Category",
             ["SELECT CATEGORY"] + categories,
+            index=0,
+            key="ps_category_select",
         )
 
         if search_category == "SELECT CATEGORY":
             st.info("Select a category to see results.")
-            return
+            st.stop()
 
         res = (
             supabase.table("sales")
@@ -245,7 +292,7 @@ def main():
 
         if not res:
             st.info("No matching sales found.")
-            return
+            st.stop()
 
         prices = [r["price"] for r in res if r.get("price") is not None]
 
@@ -256,19 +303,20 @@ def main():
 
         price_level = next((r["price_level"] for r in res if r.get("price_level")), "")
 
-        stats = []
+        stats_lines = []
         if price_level:
-            stats.append(f"**PRICE LEVEL:** {price_level}")
-        stats.append(f"**AVERAGE PRICE SOLD:** {format_price(sum(prices)/len(prices))}")
-        stats.append(f"**LOWEST PRICE SOLD:** {format_price(min(prices))}")
-        stats.append(f"**HIGHEST PRICE SOLD:** {format_price(max(prices))}")
+            stats_lines.append(f"**PRICE LEVEL:** {price_level}")
 
-        st.markdown("\n".join(stats))
+        avg_price = sum(prices) / len(prices)
+        stats_lines.append(f"**AVERAGE PRICE SOLD:** {format_price(avg_price)}")
+        stats_lines.append(f"**LOWEST PRICE SOLD:** {format_price(min(prices))}")
+        stats_lines.append(f"**HIGHEST PRICE SOLD:** {format_price(max(prices))}")
+
+        st.markdown("\n".join(stats_lines))
 
 
 if __name__ == "__main__":
     main()
-
 
 
 
