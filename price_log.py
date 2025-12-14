@@ -251,59 +251,78 @@ def main():
     # =========================
     # PRICE SEARCH
     # =========================
-    with tab_search:
-        st.header("Price Search")
+  with tab_search:
+    st.header("Price Search")
 
-        brands = [b["brand"] for b in load_brand_levels()]
+    brands = [b["brand"] for b in load_brand_levels()]
 
-search_brand = st.selectbox(
-    "Brand",
-    options=["SELECT BRAND"] + brands,
-    index=0,
-    key="search_brand",
-)
-if search_brand == "SELECT BRAND":
-    st.selectbox(
-        "Category",
-        options=["Select brand first"],
-        disabled=True,
-        key="search_category_disabled",
+    search_brand = st.selectbox(
+        "Brand",
+        options=["SELECT BRAND"] + brands,
+        index=0,
+        key="search_brand",
     )
-    st.info("Select a brand to see results.")
-    return
 
-        categories = load_categories_for_brand(search_brand)
-        search_category = st.selectbox("Category", categories, key="search_cat")
+    if search_brand == "SELECT BRAND":
+        st.selectbox(
+            "Category",
+            options=["Select brand first"],
+            disabled=True,
+            key="search_category_disabled",
+        )
+        st.info("Select a brand to see results.")
+        return
 
-        res = (
-            supabase.table("sales")
-            .select("*")
-            .eq("brand", search_brand)
-            .eq("category", search_category)
-            .execute()
-            .data
-        ) or []
+    categories = load_categories_for_brand(search_brand)
 
-        if not res:
-            st.info("No matching sales found.")
-            return
+    search_category = st.selectbox(
+        "Category",
+        options=["SELECT CATEGORY"] + categories,
+        index=0,
+        key="search_category",
+    )
 
-        prices = [r["price"] for r in res if r.get("price") is not None]
+    if search_category == "SELECT CATEGORY":
+        st.info("Select a category to see results.")
+        return
 
-        st.subheader(f"{len(prices)} SALE(S) FOUND.")
-        st.subheader(f"{sum(1 for r in res if r.get('on_sale'))} SALE(S) WITH DISCOUNTS APPLIED.")
+    res = (
+        supabase.table("sales")
+        .select("*")
+        .eq("brand", search_brand)
+        .eq("category", search_category)
+        .execute()
+        .data
+    ) or []
 
-        pl = next((r["price_level"] for r in res if r.get("price_level")), "")
-        if pl:
-            st.write(f"**PRICE LEVEL:** {pl}")
+    if not res:
+        st.info("No matching sales found.")
+        return
 
-        st.write(f"**AVERAGE PRICE SOLD:** {format_price(sum(prices)/len(prices))}")
-        st.write(f"**LOWEST PRICE SOLD:** {format_price(min(prices))}")
-        st.write(f"**HIGHEST PRICE SOLD:** {format_price(max(prices))}")
+    prices = [r["price"] for r in res if r.get("price") is not None]
+
+    st.subheader(f"{len(prices)} SALE(S) FOUND.")
+    st.subheader(
+        f"{sum(1 for r in res if r.get('on_sale'))} SALE(S) WITH DISCOUNTS APPLIED."
+    )
+
+    price_level = next(
+        (r["price_level"] for r in res if r.get("price_level")), ""
+    )
+
+    stats_lines = []
+
+    if price_level:
+        stats_lines.append(f"**PRICE LEVEL:** {price_level}")
+
+    avg_price = sum(prices) / len(prices)
+    stats_lines.append(f"**AVERAGE PRICE SOLD:** {format_price(avg_price)}")
+    stats_lines.append(f"**LOWEST PRICE SOLD:** {format_price(min(prices))}")
+    stats_lines.append(f"**HIGHEST PRICE SOLD:** {format_price(max(prices))}")
+
+    st.markdown("\n".join(stats_lines))
 
 
-if __name__ == "__main__":
-    main()
 
 
 
