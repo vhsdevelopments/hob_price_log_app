@@ -436,14 +436,11 @@ def main():
         st.write(f"**LOWEST PRICE SOLD:** {format_price(low_p)}")
         st.write(f"**HIGHEST PRICE SOLD:** {format_price(high_p)}")
 
-        df = pd.DataFrame(res)
-        if "price" in df.columns:
-            df["price"] = df["price"].apply(format_price)
-        st.dataframe(df, use_container_width=True)
 
 
 if __name__ == "__main__":
     main()
+
 
 
 
