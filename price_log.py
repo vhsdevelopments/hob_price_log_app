@@ -97,7 +97,6 @@ def insert_sale(brand, category, price, on_sale, notes, price_level):
             "category": category,
             "price": float(price),
             "on_sale": bool(on_sale),
-            "notes": notes or "",
             "price_level": price_level or "",
         }
     ).execute()
@@ -195,7 +194,6 @@ def main():
                 final_category,
                 cleaned_price,
                 on_sale,
-                notes,
                 brand_price_level,
             )
 
@@ -284,6 +282,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
