@@ -393,10 +393,7 @@ def main():
             key="search_category_selectbox",
         )
 
-        if not search_category:
-            st.info("Select a category to see results.")
-            return
-
+     
         res = (
             supabase.table("sales")
             .select("*")
@@ -440,6 +437,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
