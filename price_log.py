@@ -181,7 +181,6 @@ def main():
             st.caption(f"Interpreted as {format_price(cleaned_price)}")
 
         on_sale = st.checkbox("On sale?", key="ns_on_sale")
-        notes = st.text_area("Notes (optional)", key="ns_notes")
 
         if st.button("Save sale", key="ns_save"):
             if not final_brand or not final_category or not cleaned_price:
@@ -285,5 +284,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
