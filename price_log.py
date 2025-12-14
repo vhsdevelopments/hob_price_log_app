@@ -303,20 +303,30 @@ def main():
 
         price_level = next((r["price_level"] for r in res if r.get("price_level")), "")
 
-        stats_lines = []
-        if price_level:
-            stats_lines.append(f"**PRICE LEVEL:** {price_level}")
+avg_price = sum(prices) / len(prices)
+low_price = min(prices)
+high_price = max(prices)
 
-        avg_price = sum(prices) / len(prices)
-        stats_lines.append(f"**AVERAGE PRICE SOLD:** {format_price(avg_price)}")
-        stats_lines.append(f"**LOWEST PRICE SOLD:** {format_price(min(prices))}")
-        stats_lines.append(f"**HIGHEST PRICE SOLD:** {format_price(max(prices))}")
+lines = []
+if price_level:
+    lines.append(f"<div><b>PRICE LEVEL:</b> {price_level}</div>")
 
-        st.markdown("\n".join(stats_lines))
+lines.append(f"<div><b>AVERAGE PRICE SOLD:</b> {format_price(avg_price)}</div>")
+lines.append(f"<div><b>LOWEST PRICE SOLD:</b> {format_price(low_price)}</div>")
+lines.append(f"<div><b>HIGHEST PRICE SOLD:</b> {format_price(high_price)}</div>")
+
+st.markdown(
+    "<div style='line-height: 1.8; font-size: 18px; margin-top: 6px;'>"
+    + "".join(lines)
+    + "</div>",
+    unsafe_allow_html=True,
+)
+
 
 
 if __name__ == "__main__":
     main()
+
 
 
 
