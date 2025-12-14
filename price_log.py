@@ -90,7 +90,7 @@ def upsert_brand_level(brand, price_level):
     ).execute()
 
 
-def insert_sale(brand, category, price, on_sale, notes, price_level):
+def insert_sale(brand, category, price, on_sale, price_level):
     supabase.table("sales").insert(
         {
             "brand": brand,
@@ -282,6 +282,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
