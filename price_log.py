@@ -111,6 +111,19 @@ def main():
 
     tab_new, tab_search = st.tabs(["New Sale", "Price Search"])
     PRICE_LEVELS = ["VERY HIGH END", "HIGH END", "MID HIGH"]
+st.markdown(
+    """
+    <style>
+    div[data-baseweb="select"] > div {
+        background-color: #f2f2f2 !important;
+    }
+    div[data-baseweb="select"] span {
+        color: #000000;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
     # =========================
     # NEW SALE
@@ -282,6 +295,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
