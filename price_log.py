@@ -8,7 +8,7 @@ from supabase import create_client
 # -------------------------------------------------------------------
 
 SUPABASE_URL = "https://kvfnffdnplmxgdltywbn.supabase.co"
-SUPABASE_SERVICE_ROLE = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2Zm5mZmRucGxteGdkbHR5d2JuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTI1MzI0NiwiZXhwIjoyMDgwODI5MjQ2fQ.oHDnmLEOyqN1hM0Qd5S4u1sEtEjsgp1OPmAyHuShO3U"
+SUPABASE_SERVICE_ROLE = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2Zm5mZmRucGxteGdkbHR5d2JuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTI1MzI0NiwiZXhwIjoyMDgwODI5MjQ2fQ.oHDnmLEOyqN1hM0Qd5S4u1sEtEjsgp1OPmAyHuShO3U"
 
 supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE)
 
@@ -113,51 +113,40 @@ def main():
     BRAND_ADD_NEW = "(add new brand)"
     PRICE_LEVELS = ["VERY HIGH END", "HIGH END", "MID HIGH"]
 
+    # -------------------------
+    # STYLING
+    # -------------------------
     st.markdown(
         """
         <style>
-        /* Dropdowns */
         div[data-baseweb="select"] > div {
             background-color: #CDCDCD !important;
         }
 
-        /* Text inputs */
         div[data-baseweb="input"] > div {
             background-color: #CDCDCD !important;
         }
 
-        /* Placeholder text */
         input::placeholder {
             color: #5f5f5f;
         }
 
-        /* Save button */
         button[kind="primary"] {
             background-color: #228B22 !important;
             color: white !important;
             border: none !important;
         }
+
         button[kind="primary"]:hover {
             background-color: #1e7a1e !important;
-            color: white !important;
         }
 
-        /* Success message styling (st.success) */
         div[data-testid="stAlert"][role="alert"] {
+            border-left: 6px solid #228B22 !important;
             border-radius: 10px;
         }
-        div[data-testid="stAlert"][role="alert"] svg {
-            color: #228B22 !important;
-        }
-        div[data-testid="stAlert"][role="alert"] {
-            border-left: 6px solid #228B22 !important;
-        }
 
-        /* Toast styling (if you ever use st.toast) */
-        div[data-testid="stToast"] {
-            border-left: 6px solid #228B22 !important;
-        }
-        div[data-testid="stToast"] svg {
+        div[data-testid="stAlert"] svg {
             color: #228B22 !important;
         }
         </style>
@@ -187,7 +176,11 @@ def main():
         brand_price_level = ""
 
         if selected_brand == BRAND_ADD_NEW:
-            raw_brand = st.text_input("New brand name", key="ns_new_brand")
+            raw_brand = st.text_input(
+                "New brand name",
+                key="ns_new_brand",
+                placeholder="Enter new brand name",
+            )
             final_brand = normalize_label(raw_brand)
 
             brand_price_level = st.selectbox(
@@ -222,7 +215,11 @@ def main():
 
             if category_choice == "ADD NEW CATEGORY":
                 final_category = normalize_label(
-                    st.text_input("New category name", key="ns_new_cat")
+                    st.text_input(
+                        "New category name",
+                        key="ns_new_cat",
+                        placeholder="Enter new category",
+                    )
                 )
             else:
                 final_category = category_choice
@@ -235,13 +232,14 @@ def main():
             label_visibility="collapsed",
             key="ns_price",
         )
+
         cleaned_price = clean_price_input(raw_price)
         if cleaned_price:
             st.caption(f"Interpreted as {format_price(cleaned_price)}")
 
         on_sale = st.checkbox("On sale?", key="ns_on_sale")
 
-        if st.button("Save sale", key="ns_save", type="primary"):
+        if st.button("Save sale", type="primary"):
             if not final_brand or not final_category or not cleaned_price:
                 st.error("Please complete all required fields.")
                 st.stop()
@@ -278,7 +276,6 @@ def main():
                 "Category",
                 ["Select brand first"],
                 disabled=True,
-                key="ps_cat_disabled",
             )
             st.info("Select a brand to see results.")
             st.stop()
@@ -310,38 +307,26 @@ def main():
 
         prices = [float(r["price"]) for r in res if r.get("price") is not None]
 
-        if not prices:
-            st.info("No price data available.")
-            st.stop()
-
         st.subheader(f"{len(prices)} SALE(S) FOUND.")
         st.subheader(
             f"{sum(1 for r in res if r.get('on_sale'))} SALE(S) WITH DISCOUNTS APPLIED."
         )
 
-        price_level = next((r["price_level"] for r in res if r.get("price_level")), "")
-
         avg_price = sum(prices) / len(prices)
         low_price = min(prices)
         high_price = max(prices)
 
-        lines = []
-        if price_level:
-            lines.append(f"<div><b>PRICE LEVEL:</b> {price_level}</div>")
-        lines.append(f"<div><b>AVERAGE PRICE SOLD:</b> {format_price(avg_price)}</div>")
-        lines.append(f"<div><b>LOWEST PRICE SOLD:</b> {format_price(low_price)}</div>")
-        lines.append(f"<div><b>HIGHEST PRICE SOLD:</b> {format_price(high_price)}</div>")
-
         st.markdown(
-            "<div style='line-height: 1.8; font-size: 18px; margin-top: 6px;'>"
-            + "".join(lines)
-            + "</div>",
+            f"""
+            <div style="font-size:18px; line-height:1.8;">
+            <b>AVERAGE PRICE SOLD:</b> {format_price(avg_price)}<br>
+            <b>LOWEST PRICE SOLD:</b> {format_price(low_price)}<br>
+            <b>HIGHEST PRICE SOLD:</b> {format_price(high_price)}
+            </div>
+            """,
             unsafe_allow_html=True,
         )
 
 
 if __name__ == "__main__":
     main()
-
-
-
