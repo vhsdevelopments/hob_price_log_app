@@ -1,6 +1,18 @@
+Perfect. Here is the clean version with:
+
+Clear form button under Save sale
+Pressing Esc triggers Clear form
+Popup Continue also clears the form and resets Brand to (click or type to search)
+Price is always visible with its own header and stays disabled until Brand and Category are selected
+No X buttons
+
+Delete everything in price_log.py and paste this whole file.
+
+```python
 import re
 import streamlit as st
 from supabase import create_client
+import streamlit.components.v1 as components
 
 
 # =========================================================
@@ -52,6 +64,20 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
 # =========================================================
+# CONSTANTS
+# =========================================================
+
+BRAND_PLACEHOLDER = "(click or type to search)"
+BRAND_ADD_NEW = "(add new brand)"
+BRAND_SELECT = "(select brand)"
+
+CATEGORY_SELECT = "(select category)"
+CATEGORY_ADD_NEW = "(add new category)"
+
+PRICE_LEVELS = ["VERY HIGH END", "HIGH END", "MID HIGH"]
+
+
+# =========================================================
 # HELPERS
 # =========================================================
 
@@ -76,6 +102,22 @@ def clean_price_input(val):
 
 def format_price(val):
     return f"${float(val):,.2f}"
+
+
+def clear_new_sale_form():
+    for key in [
+        "ns_new_brand",
+        "ns_new_brand_level",
+        "ns_category",
+        "ns_new_cat",
+        "ns_price",
+        "ns_on_sale",
+    ]:
+        if key in st.session_state:
+            del st.session_state[key]
+
+    st.session_state["ns_brand"] = BRAND_PLACEHOLDER
+    st.session_state["show_saved_dialog"] = False
 
 
 # =========================================================
@@ -147,20 +189,6 @@ def insert_sale(brand, category, price, on_sale, price_level):
 
 
 # =========================================================
-# CONSTANTS
-# =========================================================
-
-BRAND_PLACEHOLDER = "(click or type to search)"
-BRAND_ADD_NEW = "(add new brand)"
-
-BRAND_SELECT = "(select brand)"
-CATEGORY_SELECT = "(select category)"
-CATEGORY_ADD_NEW = "(add new category)"
-
-PRICE_LEVELS = ["VERY HIGH END", "HIGH END", "MID HIGH"]
-
-
-# =========================================================
 # POPUP
 # =========================================================
 
@@ -169,19 +197,7 @@ def sale_saved_dialog():
     st.write("The sale has been recorded successfully.")
 
     if st.button("Continue", type="primary"):
-        for key in [
-            "ns_new_brand",
-            "ns_new_brand_level",
-            "ns_category",
-            "ns_new_cat",
-            "ns_price",
-            "ns_on_sale",
-        ]:
-            if key in st.session_state:
-                del st.session_state[key]
-
-        st.session_state["ns_brand"] = BRAND_PLACEHOLDER
-        st.session_state["show_saved_dialog"] = False
+        clear_new_sale_form()
         st.rerun()
 
 
@@ -231,30 +247,11 @@ def main():
         brand_names = [b["brand"] for b in brands]
         brand_to_level = {b["brand"]: b["price_level"] for b in brands}
 
-        col_brand, col_brand_clear = st.columns([12, 1])
-        with col_brand:
-            selected_brand = st.selectbox(
-                "Brand",
-                [BRAND_PLACEHOLDER, BRAND_ADD_NEW] + brand_names,
-                key="ns_brand",
-            )
-
-        with col_brand_clear:
-            st.write("")
-            st.write("")
-            if st.button("✕", key="clear_brand"):
-                st.session_state["ns_brand"] = BRAND_PLACEHOLDER
-                for k in [
-                    "ns_new_brand",
-                    "ns_new_brand_level",
-                    "ns_category",
-                    "ns_new_cat",
-                    "ns_price",
-                    "ns_on_sale",
-                ]:
-                    if k in st.session_state:
-                        del st.session_state[k]
-                st.rerun()
+        selected_brand = st.selectbox(
+            "Brand",
+            [BRAND_PLACEHOLDER, BRAND_ADD_NEW] + brand_names,
+            key="ns_brand",
+        )
 
         final_brand = ""
         brand_price_level = ""
@@ -272,37 +269,24 @@ def main():
 
         st.subheader("Category")
 
-        col_cat, col_cat_clear = st.columns([12, 1])
-        with col_cat:
-            if not final_brand:
-                st.selectbox("Category", ["Select brand first"], disabled=True, key="ns_cat_disabled")
-                category_choice = CATEGORY_SELECT
-                final_category = ""
+        final_category = ""
+
+        if not final_brand:
+            st.selectbox("Category", ["Select brand first"], disabled=True, key="ns_cat_disabled")
+        else:
+            categories = load_categories_for_brand(final_brand)
+            category_choice = st.selectbox(
+                "Category",
+                [CATEGORY_SELECT, CATEGORY_ADD_NEW] + categories,
+                key="ns_category",
+            )
+
+            if category_choice == CATEGORY_ADD_NEW:
+                final_category = normalize_label(st.text_input("New category name", key="ns_new_cat"))
+            elif category_choice != CATEGORY_SELECT:
+                final_category = category_choice
             else:
-                categories = load_categories_for_brand(final_brand)
-                category_choice = st.selectbox(
-                    "Category",
-                    [CATEGORY_SELECT, CATEGORY_ADD_NEW] + categories,
-                    key="ns_category",
-                )
-
-                if category_choice == CATEGORY_ADD_NEW:
-                    final_category = normalize_label(st.text_input("New category name", key="ns_new_cat"))
-                elif category_choice != CATEGORY_SELECT:
-                    final_category = category_choice
-                else:
-                    final_category = ""
-
-        with col_cat_clear:
-            st.write("")
-            st.write("")
-            if st.button("✕", key="clear_category"):
-                if "ns_category" in st.session_state:
-                    st.session_state["ns_category"] = CATEGORY_SELECT
-                for k in ["ns_new_cat", "ns_price", "ns_on_sale"]:
-                    if k in st.session_state:
-                        del st.session_state[k]
-                st.rerun()
+                final_category = ""
 
         st.subheader("Price")
 
@@ -323,15 +307,49 @@ def main():
 
         on_sale = st.checkbox("On sale?", key="ns_on_sale", disabled=price_disabled)
 
-        if st.button("Save sale", type="primary"):
-            if not final_brand or not final_category or not cleaned_price:
-                st.error("Please complete all required fields.")
-            else:
-                if selected_brand == BRAND_ADD_NEW:
-                    upsert_brand_level(final_brand, brand_price_level)
+        col_save, col_clear = st.columns([2, 2])
 
-                insert_sale(final_brand, final_category, cleaned_price, on_sale, brand_price_level)
-                st.session_state["show_saved_dialog"] = True
+        with col_save:
+            if st.button("Save sale", type="primary"):
+                if not final_brand or not final_category or not cleaned_price:
+                    st.error("Please complete all required fields.")
+                else:
+                    if selected_brand == BRAND_ADD_NEW:
+                        upsert_brand_level(final_brand, brand_price_level)
+
+                    insert_sale(final_brand, final_category, cleaned_price, on_sale, brand_price_level)
+                    st.session_state["show_saved_dialog"] = True
+
+        with col_clear:
+            if st.button("Clear form", key="clear_form_btn"):
+                clear_new_sale_form()
+                st.rerun()
+
+        components.html(
+            """
+            <script>
+            (function() {
+              if (window.__hobEscListenerAdded) return;
+              window.__hobEscListenerAdded = true;
+
+              document.addEventListener("keydown", function(e) {
+                if (e.key === "Escape") {
+                  try {
+                    const buttons = window.parent.document.querySelectorAll("button");
+                    for (const b of buttons) {
+                      if ((b.innerText || "").trim() === "Clear form") {
+                        b.click();
+                        break;
+                      }
+                    }
+                  } catch (err) {}
+                }
+              });
+            })();
+            </script>
+            """,
+            height=0,
+        )
 
         if st.session_state.get("show_saved_dialog"):
             sale_saved_dialog()
@@ -404,3 +422,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+```
+
+If you want Esc to also close the Sale saved popup when it is open, tell me and I will adjust the listener to do that too.
