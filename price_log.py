@@ -27,7 +27,7 @@ def normalize_label(name: str) -> str:
 
 
 def clean_price_input(val):
-    if not val:
+    if val is None:
         return None
     cleaned = re.sub(r"[^0-9.]", "", str(val))
     if cleaned.count(".") > 1:
@@ -109,21 +109,23 @@ def insert_sale(brand, category, price, on_sale, price_level):
 def main():
     st.set_page_config(page_title="HOB Upscale Price Log", layout="wide")
 
+    # Light grey dropdown styling
+    st.markdown(
+        """
+        <style>
+        div[data-baseweb="select"] > div {
+            background-color: #f2f2f2 !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
     tab_new, tab_search = st.tabs(["New Sale", "Price Search"])
     PRICE_LEVELS = ["VERY HIGH END", "HIGH END", "MID HIGH"]
-st.markdown(
-    """
-    <style>
-    div[data-baseweb="select"] > div {
-        background-color: #f2f2f2 !important;
-    }
-    div[data-baseweb="select"] span {
-        color: #000000;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+
+    BRAND_PLACEHOLDER = "(click or type to search)"
+    BRAND_ADD_NEW = "(add new brand)"
 
     # =========================
     # NEW SALE
@@ -137,14 +139,14 @@ st.markdown(
 
         selected_brand = st.selectbox(
             "Brand",
-            ["(click or type to search)", "(add new brand)"] + brand_list,
+            [BRAND_PLACEHOLDER, BRAND_ADD_NEW] + brand_list,
             key="ns_brand",
         )
 
         final_brand = ""
         brand_price_level = ""
 
-        if selected_brand == "(add new brand)":
+        if selected_brand == BRAND_ADD_NEW:
             raw_brand = st.text_input("New brand name", key="ns_new_brand")
             final_brand = normalize_label(raw_brand)
 
@@ -154,7 +156,7 @@ st.markdown(
                 key="ns_new_brand_level",
             )
 
-        elif selected_brand != "(click or type to search)":
+        elif selected_brand != BRAND_PLACEHOLDER:
             final_brand = selected_brand
             brand_price_level = brand_to_level.get(final_brand, "")
             if brand_price_level:
@@ -199,7 +201,7 @@ st.markdown(
                 st.error("Please complete all required fields.")
                 st.stop()
 
-            if selected_brand == "ADD NEW BRAND":
+            if selected_brand == BRAND_ADD_NEW:
                 upsert_brand_level(final_brand, brand_price_level)
 
             insert_sale(
@@ -295,10 +297,3 @@ st.markdown(
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
-
