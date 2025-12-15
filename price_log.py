@@ -1,14 +1,3 @@
-Perfect. Here is the clean version with:
-
-Clear form button under Save sale
-Pressing Esc triggers Clear form
-Popup Continue also clears the form and resets Brand to (click or type to search)
-Price is always visible with its own header and stays disabled until Brand and Category are selected
-No X buttons
-
-Delete everything in price_log.py and paste this whole file.
-
-```python
 import re
 import streamlit as st
 from supabase import create_client
@@ -422,6 +411,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-```
-
-If you want Esc to also close the Sale saved popup when it is open, tell me and I will adjust the listener to do that too.
