@@ -67,6 +67,7 @@ BRAND_SELECT = "(select brand)"
 CATEGORY_SELECT = "(select category)"
 CATEGORY_ADD_NEW = "(add new category)"
 
+PRICE_LEVEL_SELECT = "(select price level)"
 PRICE_LEVELS = ["VERY HIGH END", "HIGH END", "MID HIGH"]
 
 
@@ -257,11 +258,19 @@ def main():
             final_brand = normalize_label(
                 st.text_input("New brand name", key=k("ns_new_brand"))
             )
-            brand_price_level = st.selectbox(
+
+            brand_price_level_choice = st.selectbox(
                 "Select price level for this new brand",
-                PRICE_LEVELS,
+                [PRICE_LEVEL_SELECT] + PRICE_LEVELS,
                 key=k("ns_new_brand_level"),
             )
+
+            brand_price_level = (
+                brand_price_level_choice
+                if brand_price_level_choice != PRICE_LEVEL_SELECT
+                else ""
+            )
+
         elif selected_brand != BRAND_PLACEHOLDER:
             final_brand = selected_brand
             brand_price_level = brand_to_level.get(final_brand, "")
@@ -319,6 +328,8 @@ def main():
             if st.button("Save sale", type="primary", key=k("ns_save_btn")):
                 if not final_brand or not final_category or not cleaned_price:
                     st.error("Please complete all required fields.")
+                elif selected_brand == BRAND_ADD_NEW and not brand_price_level:
+                    st.error("Please select a price level for this new brand.")
                 else:
                     if selected_brand == BRAND_ADD_NEW:
                         upsert_brand_level(final_brand, brand_price_level)
@@ -428,35 +439,13 @@ def main():
             """
             **HOB Upscale Price Log**
 
-        This internal tool was developed to support pricing consistency and data informed decision making at **The Hospice Opportunity Boutique (HOB)**.
+            This internal tool supports pricing consistency and informed decision making at The Hospice Opportunity Boutique.
 
-        The app allows staff and volunteers to:
-        
-        • Record completed sales by brand and category  
-        • Track pricing trends over time  
-        • Identify average, lowest, and highest selling prices  
-        • Apply brand level pricing guidance for upscale items  
-
-        By centralizing this information, the app helps ensure fair, consistent, and confident pricing across the store.
-
-        ---
-
-        **Developed by:**  
-        Cecilia Abreu  
-
-        **For:**  
-        Vancouver Hospice Society  
-
-        **Purpose:**  
-        Internal operational tool to support hospice funding through retail operations.
-
-        ---
-
-        © Vancouver Hospice Society. All rights reserved.
+            Developed by Cecilia Abreu  
+            Property of Vancouver Hospice Society
             """
         )
 
 
 if __name__ == "__main__":
     main()
-
