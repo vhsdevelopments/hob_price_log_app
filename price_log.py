@@ -114,6 +114,9 @@ def main():
     BRAND_ADD_NEW = "(add new brand)"
     PRICE_LEVELS = ["VERY HIGH END", "HIGH END", "MID HIGH"]
 
+    BRAND_SELECT = "(select brand)"
+    CATEGORY_SELECT = "(select category)"
+
     # -------------------------
     # STYLING
     # -------------------------
@@ -265,25 +268,23 @@ def main():
 
         search_brand = st.selectbox(
             "Brand",
-            ["SELECT BRAND"] + brands,
+            [BRAND_SELECT] + brands,
             key="ps_brand",
         )
 
-        if search_brand == "SELECT BRAND":
-            st.selectbox("Category", ["Select brand first"], disabled=True)
-            st.info("Select a brand to see results.")
+        if search_brand == BRAND_SELECT:
+            st.selectbox("Category", ["Select brand first"], disabled=True, key="ps_cat_disabled")
             st.stop()
 
         categories = load_categories_for_brand(search_brand)
 
         search_category = st.selectbox(
             "Category",
-            ["SELECT CATEGORY"] + categories,
+            [CATEGORY_SELECT] + categories,
             key="ps_category",
         )
 
-        if search_category == "SELECT CATEGORY":
-            st.info("Select a category to see results.")
+        if search_category == CATEGORY_SELECT:
             st.stop()
 
         res = (
@@ -296,7 +297,6 @@ def main():
         ) or []
 
         if not res:
-            st.info("No matching sales found.")
             st.stop()
 
         prices = [float(r["price"]) for r in res if r.get("price") is not None]
