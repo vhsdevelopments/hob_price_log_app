@@ -321,6 +321,7 @@ def main():
             data informed decision making at **The Hospice Opportunity Boutique (HOB)**.
 
             The app allows staff and volunteers to:
+            
             • Record completed sales by brand and category  
             • Track pricing trends over time  
             • Review average, lowest, and highest selling prices  
@@ -350,3 +351,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
