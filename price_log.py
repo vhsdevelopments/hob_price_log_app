@@ -97,18 +97,17 @@ def format_price(val):
     return f"${float(val):,.2f}"
 
 
-def clear_new_sale_form():
-    for key in [
-        "ns_brand",
-        "ns_new_brand",
-        "ns_new_brand_level",
-        "ns_category",
-        "ns_new_cat",
-        "ns_price",
-        "ns_on_sale",
-    ]:
-        st.session_state.pop(key, None)
+def ensure_form_version():
+    if "ns_form_version" not in st.session_state:
+        st.session_state["ns_form_version"] = 0
 
+
+def k(base: str) -> str:
+    return f"{base}_{st.session_state['ns_form_version']}"
+
+
+def clear_new_sale_form():
+    st.session_state["ns_form_version"] += 1
     st.session_state["show_saved_dialog"] = False
 
 
@@ -200,6 +199,7 @@ def sale_saved_dialog():
 def main():
     st.set_page_config(page_title="HOB Upscale Price Log", layout="wide")
     require_login()
+    ensure_form_version()
 
     if "show_saved_dialog" not in st.session_state:
         st.session_state["show_saved_dialog"] = False
@@ -247,18 +247,20 @@ def main():
         selected_brand = st.selectbox(
             "Brand",
             [BRAND_PLACEHOLDER, BRAND_ADD_NEW] + brand_names,
-            key="ns_brand",
+            key=k("ns_brand"),
         )
 
         final_brand = ""
         brand_price_level = ""
 
         if selected_brand == BRAND_ADD_NEW:
-            final_brand = normalize_label(st.text_input("New brand name", key="ns_new_brand"))
+            final_brand = normalize_label(
+                st.text_input("New brand name", key=k("ns_new_brand"))
+            )
             brand_price_level = st.selectbox(
                 "Select price level for this new brand",
                 PRICE_LEVELS,
-                key="ns_new_brand_level",
+                key=k("ns_new_brand_level"),
             )
         elif selected_brand != BRAND_PLACEHOLDER:
             final_brand = selected_brand
@@ -273,18 +275,20 @@ def main():
                 "Category",
                 ["Select brand first"],
                 disabled=True,
-                key="ns_cat_disabled",
+                key=k("ns_cat_disabled"),
             )
         else:
             categories = load_categories_for_brand(final_brand)
             category_choice = st.selectbox(
                 "Category",
                 [CATEGORY_SELECT, CATEGORY_ADD_NEW] + categories,
-                key="ns_category",
+                key=k("ns_category"),
             )
 
             if category_choice == CATEGORY_ADD_NEW:
-                final_category = normalize_label(st.text_input("New category name", key="ns_new_cat"))
+                final_category = normalize_label(
+                    st.text_input("New category name", key=k("ns_new_cat"))
+                )
             elif category_choice != CATEGORY_SELECT:
                 final_category = category_choice
             else:
@@ -298,7 +302,7 @@ def main():
             "Price",
             placeholder="Enter price (numbers only)",
             label_visibility="collapsed",
-            key="ns_price",
+            key=k("ns_price"),
             disabled=price_disabled,
         )
 
@@ -307,23 +311,29 @@ def main():
         if cleaned_price and not price_disabled:
             st.caption(f"Interpreted as {format_price(cleaned_price)}")
 
-        on_sale = st.checkbox("On sale?", key="ns_on_sale", disabled=price_disabled)
+        on_sale = st.checkbox("On sale?", key=k("ns_on_sale"), disabled=price_disabled)
 
         col_save, col_clear = st.columns([2, 2])
 
         with col_save:
-            if st.button("Save sale", type="primary"):
+            if st.button("Save sale", type="primary", key=k("ns_save_btn")):
                 if not final_brand or not final_category or not cleaned_price:
                     st.error("Please complete all required fields.")
                 else:
                     if selected_brand == BRAND_ADD_NEW:
                         upsert_brand_level(final_brand, brand_price_level)
 
-                    insert_sale(final_brand, final_category, cleaned_price, on_sale, brand_price_level)
+                    insert_sale(
+                        final_brand,
+                        final_category,
+                        cleaned_price,
+                        on_sale,
+                        brand_price_level,
+                    )
                     st.session_state["show_saved_dialog"] = True
 
         with col_clear:
-            if st.button("Clear form", key="clear_form_btn"):
+            if st.button("Clear form", key=k("clear_form_btn")):
                 clear_new_sale_form()
                 st.rerun()
 
@@ -367,7 +377,11 @@ def main():
 
         if search_brand != BRAND_SELECT:
             categories = load_categories_for_brand(search_brand)
-            search_category = st.selectbox("Category", [CATEGORY_SELECT] + categories, key="ps_category")
+            search_category = st.selectbox(
+                "Category",
+                [CATEGORY_SELECT] + categories,
+                key="ps_category",
+            )
 
             if search_category != CATEGORY_SELECT:
                 res = (
