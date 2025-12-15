@@ -1,3 +1,4 @@
+```python
 import re
 import streamlit as st
 from supabase import create_client
@@ -8,7 +9,7 @@ from supabase import create_client
 # -------------------------------------------------------------------
 
 SUPABASE_URL = "https://kvfnffdnplmxgdltywbn.supabase.co"
-SUPABASE_SERVICE_ROLE = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2Zm5mZmRucGxteGdkbHR5d2JuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTI1MzI0NiwiZXhwIjoyMDgwODI5MjQ2fQ.oHDnmLEOyqN1hM0Qd5S4u1sEtEjsgp1OPmAyHuShO3U"
+SUPABASE_SERVICE_ROLE = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2Zm5mZmRucGxteGdkbHR5d2JuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTI1MzI0NiwiZXhwIjoyMDgwODI5MjQ2fQ.oHDnmLEOyqN1hM0Qd5S4u1sEtEjsgp1OPmAyHuShO3U"
 
 supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE)
 
@@ -109,12 +110,56 @@ def insert_sale(brand, category, price, on_sale, price_level):
 def main():
     st.set_page_config(page_title="HOB Upscale Price Log", layout="wide")
 
-    # Light grey dropdown styling
+    BRAND_PLACEHOLDER = "(click or type to search)"
+    BRAND_ADD_NEW = "(add new brand)"
+    PRICE_LEVELS = ["VERY HIGH END", "HIGH END", "MID HIGH"]
+
     st.markdown(
         """
         <style>
+        /* Dropdowns */
         div[data-baseweb="select"] > div {
-            background-color: #D4D4D4 !important;
+            background-color: #CDCDCD !important;
+        }
+
+        /* Text inputs */
+        div[data-baseweb="input"] > div {
+            background-color: #CDCDCD !important;
+        }
+
+        /* Placeholder text */
+        input::placeholder {
+            color: #5f5f5f;
+        }
+
+        /* Save button */
+        button[kind="primary"] {
+            background-color: #228B22 !important;
+            color: white !important;
+            border: none !important;
+        }
+        button[kind="primary"]:hover {
+            background-color: #1e7a1e !important;
+            color: white !important;
+        }
+
+        /* Success message styling (st.success) */
+        div[data-testid="stAlert"][role="alert"] {
+            border-radius: 10px;
+        }
+        div[data-testid="stAlert"][role="alert"] svg {
+            color: #228B22 !important;
+        }
+        div[data-testid="stAlert"][role="alert"] {
+            border-left: 6px solid #228B22 !important;
+        }
+
+        /* Toast styling (if you ever use st.toast) */
+        div[data-testid="stToast"] {
+            border-left: 6px solid #228B22 !important;
+        }
+        div[data-testid="stToast"] svg {
+            color: #228B22 !important;
         }
         </style>
         """,
@@ -122,10 +167,6 @@ def main():
     )
 
     tab_new, tab_search = st.tabs(["New Sale", "Price Search"])
-    PRICE_LEVELS = ["VERY HIGH END", "HIGH END", "MID HIGH"]
-
-    BRAND_PLACEHOLDER = "(click or type to search)"
-    BRAND_ADD_NEW = "(add new brand)"
 
     # =========================
     # NEW SALE
@@ -189,14 +230,19 @@ def main():
 
         st.subheader("Price")
 
-        raw_price = st.text_input("Enter price (numbers only)", key="ns_price")
+        raw_price = st.text_input(
+            "Price",
+            placeholder="Enter price (numbers only)",
+            label_visibility="collapsed",
+            key="ns_price",
+        )
         cleaned_price = clean_price_input(raw_price)
         if cleaned_price:
             st.caption(f"Interpreted as {format_price(cleaned_price)}")
 
         on_sale = st.checkbox("On sale?", key="ns_on_sale")
 
-        if st.button("Save sale", key="ns_save"):
+        if st.button("Save sale", key="ns_save", type="primary"):
             if not final_brand or not final_category or not cleaned_price:
                 st.error("Please complete all required fields.")
                 st.stop()
@@ -297,5 +343,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
+```
