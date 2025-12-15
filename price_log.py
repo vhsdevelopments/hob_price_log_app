@@ -14,9 +14,35 @@ def require_login():
     if st.session_state.authed:
         return
 
+    # Apply same styling to login page
+    st.markdown(
+        """
+        <style>
+        div[data-baseweb="input"] > div {
+            background-color: #CDCDCD !important;
+        }
+
+        button[kind="primary"] {
+            background-color: #228B22 !important;
+            color: white !important;
+            border: none !important;
+        }
+
+        button[kind="primary"]:hover {
+            background-color: #1e7a1e !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
     st.title("Login")
 
-    password = st.text_input("Password", type="password")
+    password = st.text_input(
+        "Password",
+        type="password",
+        placeholder="Enter password",
+    )
 
     if st.button("Sign in", type="primary"):
         if password == st.secrets["APP_PASSWORD"]:
@@ -26,6 +52,7 @@ def require_login():
             st.error("Incorrect password")
 
     st.stop()
+
 
 
 # -------------------------------------------------------------------
@@ -373,3 +400,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
