@@ -3,12 +3,37 @@ import streamlit as st
 from supabase import create_client
 
 
+# =========================================================
+# LOGIN
+# =========================================================
+
+def require_login():
+    if "authed" not in st.session_state:
+        st.session_state.authed = False
+
+    if st.session_state.authed:
+        return
+
+    st.title("Login")
+
+    password = st.text_input("Password", type="password")
+
+    if st.button("Sign in", type="primary"):
+        if password == st.secrets["APP_PASSWORD"]:
+            st.session_state.authed = True
+            st.rerun()
+        else:
+            st.error("Incorrect password")
+
+    st.stop()
+
+
 # -------------------------------------------------------------------
-# SUPABASE CONFIG
+# SUPABASE CONFIG (FROM STREAMLIT SECRETS)
 # -------------------------------------------------------------------
 
-SUPABASE_URL = "https://kvfnffdnplmxgdltywbn.supabase.co"
-SUPABASE_SERVICE_ROLE = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2Zm5mZmRucGxteGdkbHR5d2JuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTI1MzI0NiwiZXhwIjoyMDgwODI5MjQ2fQ.oHDnmLEOyqN1hM0Qd5S4u1sEtEjsgp1OPmAyHuShO3U"
+SUPABASE_URL = st.secrets["SUPABASE_URL"]
+SUPABASE_SERVICE_ROLE = st.secrets["SUPABASE_KEY"]
 
 supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE)
 
@@ -109,6 +134,7 @@ def insert_sale(brand, category, price, on_sale, price_level):
 
 def main():
     st.set_page_config(page_title="HOB Upscale Price Log", layout="wide")
+    require_login()
 
     BRAND_PLACEHOLDER = "(click or type to search)"
     BRAND_ADD_NEW = "(add new brand)"
@@ -273,7 +299,12 @@ def main():
         )
 
         if search_brand == BRAND_SELECT:
-            st.selectbox("Category", ["Select brand first"], disabled=True, key="ps_cat_disabled")
+            st.selectbox(
+                "Category",
+                ["Select brand first"],
+                disabled=True,
+                key="ps_cat_disabled",
+            )
             st.stop()
 
         categories = load_categories_for_brand(search_brand)
@@ -301,44 +332,4 @@ def main():
 
         prices = [float(r["price"]) for r in res if r.get("price") is not None]
 
-        st.subheader(f"{len(prices)} SALE(S) FOUND.")
-        st.subheader(
-            f"{sum(1 for r in res if r.get('on_sale'))} SALE(S) WITH DISCOUNTS APPLIED."
-        )
-
-        price_level = next(
-            (normalize_label(r.get("price_level")) for r in res if r.get("price_level")),
-            "",
-        )
-
-        if not price_level:
-            brand_row = (
-                supabase.table("brand_price_levels")
-                .select("price_level")
-                .eq("brand", search_brand)
-                .limit(1)
-                .execute()
-                .data
-            ) or []
-            if brand_row:
-                price_level = normalize_label(brand_row[0].get("price_level"))
-
-        avg_price = sum(prices) / len(prices)
-        low_price = min(prices)
-        high_price = max(prices)
-
-        st.markdown(
-            f"""
-            <div style="font-size:18px; line-height:1.8;">
-            <b>PRICE LEVEL:</b> {price_level}<br>
-            <b>AVERAGE PRICE SOLD:</b> {format_price(avg_price)}<br>
-            <b>LOWEST PRICE SOLD:</b> {format_price(low_price)}<br>
-            <b>HIGHEST PRICE SOLD:</b> {format_price(high_price)}
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-
-if __name__ == "__main__":
-    main()
+        st.subheader(f"{len(prices)} SALE(
