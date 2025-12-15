@@ -267,11 +267,11 @@ def main():
 
         search_brand = st.selectbox(
             "Brand",
-            ["SELECT BRAND"] + brands,
+            ["(select brand)"] + brands,
             key="ps_brand",
         )
 
-        if search_brand == "SELECT BRAND":
+        if search_brand == "(select brand)":
             st.selectbox(
                 "Category",
                 ["Select brand first"],
@@ -284,11 +284,11 @@ def main():
 
         search_category = st.selectbox(
             "Category",
-            ["SELECT CATEGORY"] + categories,
+            ["(select category)"] + categories,
             key="ps_category",
         )
 
-        if search_category == "SELECT CATEGORY":
+        if search_category == "(select category)":
             st.info("Select a category to see results.")
             st.stop()
 
@@ -330,3 +330,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
