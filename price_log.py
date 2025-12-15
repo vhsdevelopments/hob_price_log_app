@@ -124,14 +124,14 @@ def main():
 
         selected_brand = st.selectbox(
             "Brand",
-            ["SEARCH EXISTING BRAND", "ADD NEW BRAND"] + brand_list,
+            ["(click or type to search)", "(add new brand)"] + brand_list,
             key="ns_brand",
         )
 
         final_brand = ""
         brand_price_level = ""
 
-        if selected_brand == "ADD NEW BRAND":
+        if selected_brand == "(add new brand)":
             raw_brand = st.text_input("New brand name", key="ns_new_brand")
             final_brand = normalize_label(raw_brand)
 
@@ -141,7 +141,7 @@ def main():
                 key="ns_new_brand_level",
             )
 
-        elif selected_brand != "SEARCH EXISTING BRAND":
+        elif selected_brand != "(click or type to search)":
             final_brand = selected_brand
             brand_price_level = brand_to_level.get(final_brand, "")
             if brand_price_level:
@@ -282,6 +282,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
