@@ -24,6 +24,10 @@ def require_login():
         button[kind="primary"] {
             background-color: #228B22 !important;
             color: white !important;
+            border: none !important;
+        }
+        button[kind="primary"]:hover {
+            background-color: #1e7a1e !important;
         }
         </style>
         """,
@@ -95,6 +99,7 @@ def format_price(val):
 
 def clear_new_sale_form():
     for key in [
+        "ns_brand",
         "ns_new_brand",
         "ns_new_brand_level",
         "ns_category",
@@ -102,10 +107,8 @@ def clear_new_sale_form():
         "ns_price",
         "ns_on_sale",
     ]:
-        if key in st.session_state:
-            del st.session_state[key]
+        st.session_state.pop(key, None)
 
-    st.session_state["ns_brand"] = BRAND_PLACEHOLDER
     st.session_state["show_saved_dialog"] = False
 
 
@@ -216,6 +219,11 @@ def main():
         button[kind="primary"] {
             background-color: #228B22 !important;
             color: white !important;
+            border: none !important;
+        }
+
+        button[kind="primary"]:hover {
+            background-color: #1e7a1e !important;
         }
 
         button[title="Settings"] { display: none !important; }
@@ -261,7 +269,12 @@ def main():
         final_category = ""
 
         if not final_brand:
-            st.selectbox("Category", ["Select brand first"], disabled=True, key="ns_cat_disabled")
+            st.selectbox(
+                "Category",
+                ["Select brand first"],
+                disabled=True,
+                key="ns_cat_disabled",
+            )
         else:
             categories = load_categories_for_brand(final_brand)
             category_choice = st.selectbox(
