@@ -23,10 +23,6 @@ def require_login():
         button[kind="primary"] {
             background-color: #228B22 !important;
             color: white !important;
-            border: none !important;
-        }
-        button[kind="primary"]:hover {
-            background-color: #1e7a1e !important;
         }
         </style>
         """,
@@ -47,7 +43,7 @@ def require_login():
 
 
 # =========================================================
-# SUPABASE CONFIG (FROM SECRETS)
+# SUPABASE CONFIG
 # =========================================================
 
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
@@ -95,13 +91,14 @@ def load_brand_levels():
         .data
     ) or []
 
-    out = []
-    for r in res:
-        b = normalize_label(r.get("brand"))
-        pl = normalize_label(r.get("price_level"))
-        if b:
-            out.append({"brand": b, "price_level": pl})
-    return out
+    return [
+        {
+            "brand": normalize_label(r.get("brand")),
+            "price_level": normalize_label(r.get("price_level")),
+        }
+        for r in res
+        if r.get("brand")
+    ]
 
 
 def load_categories_for_brand(brand):
@@ -113,8 +110,9 @@ def load_categories_for_brand(brand):
         .data
     ) or []
 
-    cats = {normalize_label(r.get("category")) for r in res if r.get("category")}
-    return sorted(c for c in cats if c)
+    return sorted(
+        {normalize_label(r.get("category")) for r in res if r.get("category")}
+    )
 
 
 def upsert_brand_level(brand, price_level):
@@ -137,12 +135,42 @@ def insert_sale(brand, category, price, on_sale, price_level):
 
 
 # =========================================================
+# POPUP DIALOG
+# =========================================================
+
+@st.dialog("Sale Saved")
+def sale_saved_dialog():
+    st.write("Sale Saved.")
+
+    if st.button("Continue", type="primary"):
+        keys_to_clear = [
+            "ns_brand",
+            "ns_new_brand",
+            "ns_new_brand_level",
+            "ns_category",
+            "ns_new_cat",
+            "ns_price",
+            "ns_on_sale",
+        ]
+
+        for k in keys_to_clear:
+            if k in st.session_state:
+                del st.session_state[k]
+
+        st.session_state["show_saved_dialog"] = False
+        st.rerun()
+
+
+# =========================================================
 # MAIN
 # =========================================================
 
 def main():
     st.set_page_config(page_title="HOB Upscale Price Log", layout="wide")
     require_login()
+
+    if "show_saved_dialog" not in st.session_state:
+        st.session_state["show_saved_dialog"] = False
 
     BRAND_PLACEHOLDER = "(click or type to search)"
     BRAND_ADD_NEW = "(add new brand)"
@@ -177,17 +205,15 @@ def main():
             border-radius: 10px;
         }
 
-        div[data-testid="stAlert"] svg {
-            color: #228B22 !important;
-        }
-
         button[title="Settings"] { display: none !important; }
         </style>
         """,
         unsafe_allow_html=True,
     )
 
-    tab_new, tab_search, tab_about = st.tabs(["New Sale", "Price Search", "About"])
+    tab_new, tab_search, tab_about = st.tabs(
+        ["New Sale", "Price Search", "About"]
+    )
 
     # =========================
     # NEW SALE
@@ -209,13 +235,9 @@ def main():
         brand_price_level = ""
 
         if selected_brand == BRAND_ADD_NEW:
-            raw_brand = st.text_input(
-                "New brand name",
-                placeholder="Enter new brand name",
-                key="ns_new_brand",
+            final_brand = normalize_label(
+                st.text_input("New brand name", placeholder="Enter new brand", key="ns_new_brand")
             )
-            final_brand = normalize_label(raw_brand)
-
             brand_price_level = st.selectbox(
                 "Select price level for this new brand",
                 PRICE_LEVELS,
@@ -228,48 +250,55 @@ def main():
 
         st.subheader("Category")
 
-        if not final_brand:
-            st.selectbox("Category", ["Select brand first"], disabled=True, key="ns_cat_disabled")
-            st.subheader("Price")
-            st.text_input("Price", placeholder="Enter price (numbers only)", label_visibility="collapsed", disabled=True, key="ns_price_disabled")
-            st.checkbox("On sale?", disabled=True, key="ns_on_sale_disabled")
-        else:
+        if final_brand:
             categories = load_categories_for_brand(final_brand)
             category_choice = st.selectbox(
                 "Category",
-                ["(add new category)"] + categories,
+                ["ADD NEW CATEGORY"] + categories,
                 key="ns_category",
             )
 
-            if category_choice == "(add new category)":
+            if category_choice == "ADD NEW CATEGORY":
                 final_category = normalize_label(
                     st.text_input("New category name", placeholder="Enter new category", key="ns_new_cat")
                 )
             else:
                 final_category = category_choice
 
-            st.subheader("Price")
             raw_price = st.text_input(
                 "Price",
                 placeholder="Enter price (numbers only)",
                 label_visibility="collapsed",
                 key="ns_price",
             )
+
             cleaned_price = clean_price_input(raw_price)
             if cleaned_price:
                 st.caption(f"Interpreted as {format_price(cleaned_price)}")
 
             on_sale = st.checkbox("On sale?", key="ns_on_sale")
 
-            if st.button("Save sale", type="primary", key="ns_save"):
+            if st.button("Save sale", type="primary"):
                 if not final_brand or not final_category or not cleaned_price:
                     st.error("Please complete all required fields.")
                 else:
                     if selected_brand == BRAND_ADD_NEW:
                         upsert_brand_level(final_brand, brand_price_level)
 
-                    insert_sale(final_brand, final_category, cleaned_price, on_sale, brand_price_level)
-                    st.success("Sale saved.")
+                    insert_sale(
+                        final_brand,
+                        final_category,
+                        cleaned_price,
+                        on_sale,
+                        brand_price_level,
+                    )
+
+                    st.session_state["show_saved_dialog"] = True
+        else:
+            st.selectbox("Category", ["Select brand first"], disabled=True)
+
+        if st.session_state.get("show_saved_dialog"):
+            sale_saved_dialog()
 
     # =========================
     # PRICE SEARCH
@@ -279,22 +308,11 @@ def main():
 
         brands = [b["brand"] for b in load_brand_levels()]
 
-        search_brand = st.selectbox(
-            "Brand",
-            [BRAND_SELECT] + brands,
-            key="ps_brand",
-        )
+        search_brand = st.selectbox("Brand", [BRAND_SELECT] + brands)
 
-        if search_brand == BRAND_SELECT:
-            st.selectbox("Category", ["Select brand first"], disabled=True, key="ps_cat_disabled")
-        else:
+        if search_brand != BRAND_SELECT:
             categories = load_categories_for_brand(search_brand)
-
-            search_category = st.selectbox(
-                "Category",
-                [CATEGORY_SELECT] + categories,
-                key="ps_category",
-            )
+            search_category = st.selectbox("Category", [CATEGORY_SELECT] + categories)
 
             if search_category != CATEGORY_SELECT:
                 res = (
@@ -314,29 +332,11 @@ def main():
                         f"{sum(1 for r in res if r.get('on_sale'))} SALE(S) WITH DISCOUNTS APPLIED."
                     )
 
-                    price_level = next(
-                        (normalize_label(r.get("price_level")) for r in res if r.get("price_level")),
-                        "",
-                    )
-
-                    if not price_level:
-                        row = (
-                            supabase.table("brand_price_levels")
-                            .select("price_level")
-                            .eq("brand", search_brand)
-                            .limit(1)
-                            .execute()
-                            .data
-                        ) or []
-                        if row:
-                            price_level = normalize_label(row[0].get("price_level"))
-
                     avg_price = sum(prices) / len(prices)
 
                     st.markdown(
                         f"""
                         <div style="font-size:18px; line-height:1.8;">
-                        <b>PRICE LEVEL:</b> {price_level}<br>
                         <b>AVERAGE PRICE SOLD:</b> {format_price(avg_price)}<br>
                         <b>LOWEST PRICE SOLD:</b> {format_price(min(prices))}<br>
                         <b>HIGHEST PRICE SOLD:</b> {format_price(max(prices))}
@@ -355,18 +355,16 @@ def main():
             """
             ### HOB Upscale Price Log
 
-            This internal tool supports pricing consistency and data informed decision making at
-            **The Hospice Opportunity Boutique (HOB)**.
+            This internal application supports pricing consistency and data informed
+            decision making at **The Hospice Opportunity Boutique (HOB)**.
 
-            This app is used to
-            
-            • Record completed sales by brand and category  
-            • Track pricing trends over time  
-            • Review average, lowest, and highest selling prices  
-            • Apply brand level pricing guidance for upscale items  
+            It is used to record completed sales, track pricing trends,
+            and support confident and consistent pricing practices.
 
             **Developed by:** Cecilia Abreu  
             **Property of:** Vancouver Hospice Society  
+
+            © Vancouver Hospice Society. All rights reserved.
             """,
             unsafe_allow_html=True,
         )
@@ -374,4 +372,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
