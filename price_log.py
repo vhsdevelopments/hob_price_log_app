@@ -65,6 +65,7 @@ def load_brand_levels(limit=5000):
         level = normalize_label(r.get("price_level"))
         if brand:
             out.append({"brand": brand, "price_level": level})
+
     return sorted(out, key=lambda x: x["brand"])
 
 
@@ -119,10 +120,7 @@ def main():
     st.markdown(
         """
         <style>
-        div[data-baseweb="select"] > div {
-            background-color: #CDCDCD !important;
-        }
-
+        div[data-baseweb="select"] > div,
         div[data-baseweb="input"] > div {
             background-color: #CDCDCD !important;
         }
@@ -178,8 +176,8 @@ def main():
         if selected_brand == BRAND_ADD_NEW:
             raw_brand = st.text_input(
                 "New brand name",
-                key="ns_new_brand",
                 placeholder="Enter new brand name",
+                key="ns_new_brand",
             )
             final_brand = normalize_label(raw_brand)
 
@@ -217,8 +215,8 @@ def main():
                 final_category = normalize_label(
                     st.text_input(
                         "New category name",
-                        key="ns_new_cat",
                         placeholder="Enter new category",
+                        key="ns_new_cat",
                     )
                 )
             else:
@@ -267,16 +265,12 @@ def main():
 
         search_brand = st.selectbox(
             "Brand",
-            ["(select brand)"] + brands,
+            ["SELECT BRAND"] + brands,
             key="ps_brand",
         )
 
-        if search_brand == "(select brand)":
-            st.selectbox(
-                "Category",
-                ["Select brand first"],
-                disabled=True,
-            )
+        if search_brand == "SELECT BRAND":
+            st.selectbox("Category", ["Select brand first"], disabled=True)
             st.info("Select a brand to see results.")
             st.stop()
 
@@ -284,11 +278,11 @@ def main():
 
         search_category = st.selectbox(
             "Category",
-            ["(select category)"] + categories,
+            ["SELECT CATEGORY"] + categories,
             key="ps_category",
         )
 
-        if search_category == "(select category)":
+        if search_category == "SELECT CATEGORY":
             st.info("Select a category to see results.")
             st.stop()
 
@@ -305,56 +299,46 @@ def main():
             st.info("No matching sales found.")
             st.stop()
 
-     prices = [float(r["price"]) for r in res if r.get("price") is not None]
+        prices = [float(r["price"]) for r in res if r.get("price") is not None]
 
-st.subheader(f"{len(prices)} SALE(S) FOUND.")
-st.subheader(
-    f"{sum(1 for r in res if r.get('on_sale'))} SALE(S) WITH DISCOUNTS APPLIED."
-)
+        st.subheader(f"{len(prices)} SALE(S) FOUND.")
+        st.subheader(
+            f"{sum(1 for r in res if r.get('on_sale'))} SALE(S) WITH DISCOUNTS APPLIED."
+        )
 
-# Try to pull price level from the sales rows first
-price_level = next(
-    (normalize_label(r.get("price_level")) for r in res if r.get("price_level")),
-    "",
-)
+        price_level = next(
+            (normalize_label(r.get("price_level")) for r in res if r.get("price_level")),
+            "",
+        )
 
-# Fallback: pull price level from brand_price_levels table
-if not price_level:
-    brand_level_row = (
-        supabase.table("brand_price_levels")
-        .select("price_level")
-        .eq("brand", search_brand)
-        .limit(1)
-        .execute()
-        .data
-    ) or []
-    if brand_level_row:
-        price_level = normalize_label(brand_level_row[0].get("price_level"))
+        if not price_level:
+            brand_row = (
+                supabase.table("brand_price_levels")
+                .select("price_level")
+                .eq("brand", search_brand)
+                .limit(1)
+                .execute()
+                .data
+            ) or []
+            if brand_row:
+                price_level = normalize_label(brand_row[0].get("price_level"))
 
-avg_price = sum(prices) / len(prices)
-low_price = min(prices)
-high_price = max(prices)
+        avg_price = sum(prices) / len(prices)
+        low_price = min(prices)
+        high_price = max(prices)
 
-html_lines = []
-if price_level:
-    html_lines.append(f"<b>PRICE LEVEL:</b> {price_level}<br>")
-
-html_lines.append(f"<b>AVERAGE PRICE SOLD:</b> {format_price(avg_price)}<br>")
-html_lines.append(f"<b>LOWEST PRICE SOLD:</b> {format_price(low_price)}<br>")
-html_lines.append(f"<b>HIGHEST PRICE SOLD:</b> {format_price(high_price)}")
-
-st.markdown(
-    f"""
-    <div style="font-size:18px; line-height:1.8;">
-    {''.join(html_lines)}
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
+        st.markdown(
+            f"""
+            <div style="font-size:18px; line-height:1.8;">
+            <b>PRICE LEVEL:</b> {price_level}<br>
+            <b>AVERAGE PRICE SOLD:</b> {format_price(avg_price)}<br>
+            <b>LOWEST PRICE SOLD:</b> {format_price(low_price)}<br>
+            <b>HIGHEST PRICE SOLD:</b> {format_price(high_price)}
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
 
 if __name__ == "__main__":
     main()
-
-
