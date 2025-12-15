@@ -422,18 +422,16 @@ def main():
     # =========================
     # ABOUT
     # =========================
-with tab_about:
-    st.header("About this app")
+    with tab_about:
+        st.header("About this app")
+        st.markdown(
+            """
+            **HOB Upscale Price Log**
 
-    st.markdown(
-        """
-        ### HOB Upscale Price Log
-
-        This internal tool was developed to support pricing consistency and data informed decision making at  
+             This internal tool was developed to support pricing consistency and data informed decision making at  
         **The Hospice Opportunity Boutique (HOB)**.
 
         The app allows staff and volunteers to:
-        
         • Record completed sales by brand and category  
         • Track pricing trends over time  
         • Identify average, lowest, and highest selling prices  
@@ -455,10 +453,9 @@ with tab_about:
         ---
 
         © Vancouver Hospice Society. All rights reserved.
-        """,
-        unsafe_allow_html=True,
-    )
+            """
+        )
+
 
 if __name__ == "__main__":
     main()
-
