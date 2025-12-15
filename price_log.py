@@ -422,19 +422,43 @@ def main():
     # =========================
     # ABOUT
     # =========================
-    with tab_about:
-        st.header("About this app")
-        st.markdown(
-            """
-            **HOB Upscale Price Log**
+with tab_about:
+    st.header("About this app")
 
-            This internal tool supports pricing consistency and informed decision making at The Hospice Opportunity Boutique.
+    st.markdown(
+        """
+        ### HOB Upscale Price Log
 
-            Developed by Cecilia Abreu  
-            Property of Vancouver Hospice Society
-            """
-        )
+        This internal tool was developed to support pricing consistency and data informed decision making at  
+        **The Hospice Opportunity Boutique (HOB)**.
 
+        The app allows staff and volunteers to:
+        
+        • Record completed sales by brand and category  
+        • Track pricing trends over time  
+        • Identify average, lowest, and highest selling prices  
+        • Apply brand level pricing guidance for upscale items  
+
+        By centralizing this information, the app helps ensure fair, consistent, and confident pricing across the store.
+
+        ---
+
+        **Developed by:**  
+        Cecilia Abreu  
+
+        **For:**  
+        Vancouver Hospice Society  
+
+        **Purpose:**  
+        Internal operational tool to support hospice funding through retail operations.
+
+        ---
+
+        © Vancouver Hospice Society. All rights reserved.
+        """,
+        unsafe_allow_html=True,
+    )
 
 if __name__ == "__main__":
     main()
+
