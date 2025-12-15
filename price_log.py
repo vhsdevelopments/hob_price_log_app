@@ -114,7 +114,7 @@ def main():
         """
         <style>
         div[data-baseweb="select"] > div {
-            background-color: #CDCDCD !important;
+            background-color: #D4D4D4 !important;
         }
         </style>
         """,
@@ -297,4 +297,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
