@@ -100,6 +100,20 @@ def load_brand_levels():
     return out
 
 
+def get_brand_price_level(brand: str) -> str:
+    row = (
+        supabase.table("brand_price_levels")
+        .select("price_level")
+        .eq("brand", brand)
+        .limit(1)
+        .execute()
+        .data
+    ) or []
+    if not row:
+        return ""
+    return normalize_label(row[0].get("price_level"))
+
+
 def load_categories_for_brand(brand):
     res = (
         supabase.table("sales")
@@ -170,8 +184,11 @@ def main():
 
     BRAND_PLACEHOLDER = "(click or type to search)"
     BRAND_ADD_NEW = "(add new brand)"
+
     BRAND_SELECT = "(select brand)"
     CATEGORY_SELECT = "(select category)"
+    CATEGORY_ADD_NEW = "(add new category)"
+
     PRICE_LEVELS = ["VERY HIGH END", "HIGH END", "MID HIGH"]
 
     st.markdown(
@@ -200,7 +217,7 @@ def main():
     tab_new, tab_search, tab_about = st.tabs(["New Sale", "Price Search", "About"])
 
     # =========================
-    # NEW SALE (UNCHANGED UI)
+    # NEW SALE
     # =========================
     with tab_new:
         st.header("Record a new sale")
@@ -235,18 +252,23 @@ def main():
 
         if final_brand:
             categories = load_categories_for_brand(final_brand)
+
             category_choice = st.selectbox(
                 "Category",
-                ["ADD NEW CATEGORY"] + categories,
+                [CATEGORY_SELECT, CATEGORY_ADD_NEW] + categories,
                 key="ns_category",
             )
 
-            if category_choice == "ADD NEW CATEGORY":
+            if category_choice == CATEGORY_ADD_NEW:
                 final_category = normalize_label(
                     st.text_input("New category name", key="ns_new_cat")
                 )
-            else:
+            elif category_choice != CATEGORY_SELECT:
                 final_category = category_choice
+            else:
+                final_category = ""
+
+            st.subheader("Price")
 
             raw_price = st.text_input(
                 "Price",
@@ -284,17 +306,21 @@ def main():
             sale_saved_dialog()
 
     # =========================
-    # PRICE SEARCH (UNCHANGED)
+    # PRICE SEARCH
     # =========================
     with tab_search:
         st.header("Price Search")
 
         brands = [b["brand"] for b in load_brand_levels()]
-        search_brand = st.selectbox("Brand", [BRAND_SELECT] + brands)
+        search_brand = st.selectbox("Brand", [BRAND_SELECT] + brands, key="ps_brand")
 
         if search_brand != BRAND_SELECT:
             categories = load_categories_for_brand(search_brand)
-            search_category = st.selectbox("Category", [CATEGORY_SELECT] + categories)
+            search_category = st.selectbox(
+                "Category",
+                [CATEGORY_SELECT] + categories,
+                key="ps_category",
+            )
 
             if search_category != CATEGORY_SELECT:
                 res = (
@@ -309,24 +335,34 @@ def main():
                 prices = [float(r["price"]) for r in res if r.get("price") is not None]
 
                 if prices:
-                    st.subheader(f"{len(prices)} SALE(S) FOUND.")
-                    st.subheader(
-                        f"{sum(1 for r in res if r.get('on_sale'))} SALE(S) WITH DISCOUNTS APPLIED."
-                    )
+                    sale_count = len(prices)
+                    discount_count = sum(1 for r in res if r.get("on_sale"))
 
-                    avg_price = sum(prices) / len(prices)
-
-                    st.markdown(
-                        f"""
-                        <b>AVERAGE PRICE SOLD:</b> {format_price(avg_price)}<br>
-                        <b>LOWEST PRICE SOLD:</b> {format_price(min(prices))}<br>
-                        <b>HIGHEST PRICE SOLD:</b> {format_price(max(prices))}
-                        """,
-                        unsafe_allow_html=True,
+                    price_level = next(
+                        (normalize_label(r.get("price_level")) for r in res if r.get("price_level")),
+                        "",
                     )
+                    if not price_level:
+                        price_level = get_brand_price_level(search_brand)
+
+                    avg_price = sum(prices) / sale_count
+                    low_price = min(prices)
+                    high_price = max(prices)
+
+                    st.subheader(f"{sale_count} SALE(S) FOUND.")
+                    st.subheader(f"{discount_count} SALE(S) WITH DISCOUNTS APPLIED.")
+
+                    lines = []
+                    if price_level:
+                        lines.append(f"**PRICE LEVEL:** {price_level}")
+                    lines.append(f"**AVERAGE PRICE SOLD:** {format_price(avg_price)}")
+                    lines.append(f"**LOWEST PRICE SOLD:** {format_price(low_price)}")
+                    lines.append(f"**HIGHEST PRICE SOLD:** {format_price(high_price)}")
+
+                    st.markdown("\n\n".join(lines))
 
     # =========================
-    # ABOUT (UNCHANGED)
+    # ABOUT
     # =========================
     with tab_about:
         st.header("About this app")
@@ -335,13 +371,11 @@ def main():
             """
             **HOB Upscale Price Log**
 
-            Internal tool used to support pricing consistency and informed decision making  
-            at The Hospice Opportunity Boutique.
+            This app supports pricing consistency and informed decision making at The Hospice Opportunity Boutique.
 
             Developed by Cecilia Abreu  
             Property of Vancouver Hospice Society
-            """,
-            unsafe_allow_html=True,
+            """
         )
 
 
