@@ -237,11 +237,11 @@ def main():
             categories = load_categories_for_brand(final_brand)
             category_choice = st.selectbox(
                 "Category",
-                ["ADD NEW CATEGORY"] + categories,
+                ["(add new category)"] + categories,
                 key="ns_category",
             )
 
-            if category_choice == "ADD NEW CATEGORY":
+            if category_choice == "(add new category)":
                 final_category = normalize_label(
                     st.text_input("New category name", placeholder="Enter new category", key="ns_new_cat")
                 )
@@ -374,3 +374,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
