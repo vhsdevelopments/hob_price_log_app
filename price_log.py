@@ -439,6 +439,8 @@ def main():
         st.markdown(
             """
 **HOB Upscale Price Log**
+
+
 This internal tool was created to help us price every donation with care and consistency at the Hospice Opportunity Boutique (HOB). 
 Each item donated helps sustain the work of Vancouver Hospice Society, turning generosity into free bereavement support and compassionate end of life care.
 
@@ -452,4 +454,5 @@ Property of Vancouver Hospice Society
 
 if __name__ == "__main__":
     main()
+
 
