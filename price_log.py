@@ -262,6 +262,7 @@ def main():
             brand_price_level_choice = st.selectbox(
                 "Select price level for this new brand",
                 [PRICE_LEVEL_SELECT] + PRICE_LEVELS,
+                index=0,
                 key=k("ns_new_brand_level"),
             )
 
@@ -434,31 +435,27 @@ def main():
     # ABOUT
     # =========================
     with tab_about:
-        st.header("About this app")
+        st.header("About")
         st.markdown(
             """
-            **HOB Upscale Price Log**
+**HOB Upscale Price Log**
 
-        This internal tool was developed to support pricing consistency and data informed decision making at  
-        **The Hospice Opportunity Boutique (HOB)**.
+This internal tool was developed to support pricing consistency and data informed decision making at  
+**The Hospice Opportunity Boutique (HOB)**.
 
-        The app allows staff and volunteers to:
-            • Record completed sales by brand and category  
-            • Track pricing trends over time  
-            • Identify average, lowest, and highest selling prices  
-            • Apply brand level pricing guidance for upscale items  
+The app allows staff and volunteers to:
+• Record completed sales by brand and category  
+• Track pricing trends over time  
+• Identify average, lowest, and highest selling prices  
+• Apply brand level pricing guidance for upscale items  
 
-            By centralizing this information, the app helps ensure fair, consistent, and confident pricing across the store.
+By centralizing this information, the app helps ensure fair, consistent, and confident pricing across the store.
 
-            ---
-
-
-            Developed by Cecilia Abreu  
-            Property of Vancouver Hospice Society
+Developed by Cecilia Abreu  
+Property of Vancouver Hospice Society
             """
         )
 
 
 if __name__ == "__main__":
     main()
-
