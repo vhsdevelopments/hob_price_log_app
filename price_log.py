@@ -439,17 +439,10 @@ def main():
         st.markdown(
             """
 **HOB Upscale Price Log**
+This internal tool was created to help us price every donation with care and consistency at the Hospice Opportunity Boutique (HOB). 
+Each item donated helps sustain the work of Vancouver Hospice Society, turning generosity into free bereavement support and compassionate end of life care.
 
-This internal tool was developed to support pricing consistency and data informed decision making at  
-**The Hospice Opportunity Boutique (HOB)**.
-
-The app allows staff and volunteers to:
-• Record completed sales by brand and category  
-• Track pricing trends over time  
-• Identify average, lowest, and highest selling prices  
-• Apply brand level pricing guidance for upscale items  
-
-By centralizing this information, the app helps ensure fair, consistent, and confident pricing across the store.
+By recording sales and pricing trends in one place, this tool helps volunteers make confident pricing decisions, ensuring every donation is valued and makes the greatest possible impact.
 
 Developed by Cecilia Abreu  
 Property of Vancouver Hospice Society
@@ -459,3 +452,4 @@ Property of Vancouver Hospice Society
 
 if __name__ == "__main__":
     main()
+
