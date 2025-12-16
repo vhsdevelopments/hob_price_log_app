@@ -60,7 +60,7 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 # CONSTANTS
 # =========================================================
 
-BRAND_PLACEHOLDER = "(click or type to search)"
+BRAND_PLACEHOLDER = "(Select or type to search)"
 BRAND_ADD_NEW = "(add new brand)"
 BRAND_SELECT = "(select brand)"
 
@@ -452,6 +452,7 @@ Property of Vancouver Hospice Society
 
 if __name__ == "__main__":
     main()
+
 
 
 
